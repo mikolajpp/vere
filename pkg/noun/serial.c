@@ -1027,6 +1027,184 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   return len_i;
 }
 
+/* _cs_etch_ui_size(): output length in @ui for given mpz_t
+ */
+static inline size_t
+_cs_etch_ui_size(mpz_t a_mp)
+{
+    size_t len_i = mpz_sizeinbase(a_mp, 10);
+    return len_i + 2; // + 0i
+}
+
+/*
+ * _cs_etch_ui_bytes(): atom to @ui impl.
+ */
+static size_t 
+_cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
+{
+    c3_y* buf_y = hun_y + (len_i - 1);
+    mpz_t   b_mp;
+    c3_w    b_w;
+    size_t  dif_i;
+
+    // Initialize mp integer b with initial space
+    // for 10-bit number. Q: why 10 bit? 
+    mpz_init2(b_mp, 10);
+
+    if ( !mpz_size(a_mp) ) {
+        *buf_y-- = '0';
+    }
+    else {
+        while ( 1 ) { 
+            // @ui does not have separators.
+            // What would be the most efficient way to extract digits?
+            b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
+
+            // Verify that the returned remainder is equal to b_mp
+            // Is it a sanity check? The remainder must be less than 1000, 
+            // perhaps this check is not really necessary. 
+            c3_assert( mpz_get_ui(b_mp) == b_w); // XX
+
+            /* If there are no more digits waiting 
+             * to be extracted.*/
+            if ( !mpz_size(a_mp) ) {
+                /*
+                 * Extract 1-3 digits
+                 */
+                while ( b_w ) {
+                    *buf_y-- = '0' + (b_w % 10);
+                    b_w /= 10;
+                }
+                break;
+            }
+
+            *buf_y-- = '0' + (b_w % 10);
+            b_w /= 10;
+            *buf_y-- = '0' + (b_w % 10);
+            b_w /= 10;
+            *buf_y-- = '0' + (b_w % 10);
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y-- = '0';
+
+    buf_y++;
+
+    c3_assert( buf_y >= hun_y); // XX
+    
+    // mpz_sizeinbase may overestimate by 1
+    // therefore we might have to move 
+    // the buffer to align it with the beginning of hun_y
+    {
+        // Difference between allocated size and size
+        // of the string put so far 
+        size_t dif_i = buf_y - hun_y;
+        
+        if ( dif_i ) {
+            len_i -= dif_i;
+            memmove(hun_y, buf_y, dif_i);
+            memset(hun_y + len_i, 0, dif_i);
+        }
+    }
+    mpz_clear(b_mp);
+
+    return len_i;
+}
+/* u3s_etch_ui_smol(): c3_d to @ui
+ **
+ **  =(22 (met 3 (scot %ud (dec (bex 64)))))
+ */
+
+#define SMOL_UI_LEN 22
+
+c3_y*
+u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI_LEN])
+{
+    c3_y* buf_y = hun_y + (SMOL_UI_LEN - 1);
+    c3_w  b_w;
+
+    if ( !a_d ) {
+        *buf_y-- = '0';
+    }
+    else{
+        while ( a_d > 0 ) {
+            b_w = a_d % 10;
+            a_d /= 10;
+
+            *buf_y-- = '0' + b_w;
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y-- = '0';
+
+    return buf_y + 1;
+}
+
+/* u3s_etch_ui(): atom to @ui
+ */
+u3_atom
+u3s_etch_ui(u3_atom a)
+{
+    c3_d a_d;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI_LEN];
+        c3_y* buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        c3_w dif_w = (c3_p)buf_y - (c3_p)hun_y;
+        return u3i_bytes(sizeof(hun_y) - dif_w, buf_y);
+    }
+
+    u3i_slab sab_u;
+    size_t   len_i;
+    mpz_t    a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    u3i_slab_bare(&sab_u, 3, len_i);
+    sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+    _cs_etch_ui_bytes(a_mp, len_i, sab_u.buf_y);
+
+    mpz_clear(a_mp);
+    return u3i_slab_mint_bytes(&sab_u);
+}
+/* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string
+ */
+size_t 
+u3s_etch_ui_c(u3_atom a, c3_c** out_c)
+{
+    c3_d   a_d;
+    size_t len_i;
+    c3_y*  buf_y;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI_LEN];
+        buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        len_i = sizeof(hun_y) - ((c3_p)buf_y - (c3_p)hun_y);
+        *out_c = c3_malloc(len_i + 1);
+        (*out_c)[len_i] = 0;
+        memcpy(*out_c, buf_y, len_i);
+
+        return len_i;
+    }
+
+    mpz_t a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    buf_y = c3_malloc(len_i + 1);
+    buf_y[len_i] = 0;
+
+    len_i = _cs_etch_ui_bytes(a_mp, len_i, buf_y);
+
+    mpz_clear(a_mp);
+
+    *out_c = (c3_c*)buf_y;
+    return len_i;
+}
+
 /* _cs_etch_ux_bytes(): atom to @ux impl.
 */
 static void
