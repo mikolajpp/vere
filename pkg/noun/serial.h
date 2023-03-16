@@ -151,4 +151,14 @@
         u3_weak
         u3s_sift_ud(u3_atom a);
 
+      /* u3s_sift_ui_bytes: parse @ui.
+      */
+        u3_weak
+        u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y);
+
+      /* u3s_sift_ui: parse @ui.
+      */
+        u3_weak
+        u3s_sift_ui(u3_atom a);
+
 #endif /* ifndef U3_SERIAL_H */

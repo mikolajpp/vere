@@ -1595,3 +1595,110 @@ u3s_sift_ud(u3_atom a)
 
   return u3s_sift_ud_bytes(len_w, byt_y);
 }
+
+#define DIGIT(d)  ( (d) >= '0' && (d) <= '9' )
+
+/* u3s_sift_ui_bytes */
+u3_weak
+u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  c3_d val_d = 0;
+
+  if ( !len_w ) return u3_none;
+
+  //  parse the prefix
+  //
+  if ( len_w < 2 || ! ( byt_y[0] == '0' && byt_y[1] == 'i') ) {
+    return u3_none;
+  }
+
+  byt_y += 2;
+  len_w -= 2;
+
+  if ( len_w == 1 && *byt_y == '0' ) {
+    return (u3_noun)0;
+  }
+
+  // Invalid number string 0i0x
+  //
+  if ( *byt_y == '0' ) {
+    return u3_none;
+  }
+
+
+  // Avoid gmp allocation if possible
+  //  - 19 decimal digits fit in 64 bits
+  //
+  if ( len_w < 20 ) {
+
+    while ( len_w > 0 ) {
+
+      if ( ! DIGIT(*byt_y) ) {
+        return u3_none;
+      }
+
+      val_d *= 10;
+      val_d += (*byt_y - '0');
+
+      byt_y++;
+      len_w--;
+    }
+
+    return u3i_chub(val_d);
+  }
+  else {
+    mpz_t val_mp;  
+    
+    mpz_init2(val_mp, 2*sizeof(val_d)*8);
+
+    /*
+     * XX A more efficient way would be to parse the big number word by
+     * word, eg. in chunks of 19 digits 
+     */
+    while ( len_w > 0) {
+
+      if ( ! DIGIT(*byt_y) ) {
+        return u3_none;
+      }
+
+      val_d *= 10;
+
+      mpz_mul_ui(val_mp, val_mp, 10);
+      mpz_add_ui(val_mp, val_mp, (*byt_y - '0'));
+
+      byt_y++;
+      len_w--;
+    }
+
+    fprintf(stderr, "val_mp = ");
+    mpz_out_str(stderr, 10, val_mp);
+    fprintf(stderr, "\n");
+
+    u3_atom val_a = u3i_mp(val_mp);
+
+    return val_a;
+  }
+}
+
+#undef DIGIT
+
+u3_weak 
+u3s_sift_ui(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_ui_bytes(len_w, byt_y);
+}
