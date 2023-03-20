@@ -987,7 +987,7 @@ _test_jets(void)
   }
 
   if ( !_test_sift_ui() ) {
-    fprintf(stderr, "test jets: sift_ud: failed\r\n");
+    fprintf(stderr, "test jets: sift_ui: failed\r\n");
     ret_i = 0;
   }
 

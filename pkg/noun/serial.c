@@ -1609,7 +1609,7 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
 
   //  parse the prefix
   //
-  if ( len_w < 2 || ! ( byt_y[0] == '0' && byt_y[1] == 'i') ) {
+  if ( len_w < 3 || ! ( byt_y[0] == '0' && byt_y[1] == 'i') ) {
     return u3_none;
   }
 
