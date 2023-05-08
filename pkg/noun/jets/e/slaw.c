@@ -33,6 +33,30 @@ _parse_ud(u3_noun a)
 }
 
 static inline u3_noun
+_parse_uv(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_uv(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
+
+static inline u3_noun
+_parse_uw(u3_noun a)
+{
+  u3_weak pro;
+
+  if ( u3_none == (pro = u3s_sift_uw(u3x_atom(a))) ) {
+    return u3_nul;
+  }
+
+  return u3nc(u3_nul, pro);
+}
+
+static inline u3_noun
 _parse_ux(u3_noun a)
 {
   u3_weak pro;
@@ -329,6 +353,12 @@ u3we_slaw(u3_noun cor)
 
     case c3__ud:
       return _parse_ud(txt);
+
+    case c3__uv:
+      return _parse_uv(txt);
+
+    case c3__uw:
+      return _parse_uw(txt);
 
     case c3__ux:
       return _parse_ux(txt);
