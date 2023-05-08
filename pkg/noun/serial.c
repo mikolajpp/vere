@@ -1959,6 +1959,43 @@ static inline c3_s _cs_hex_val(c3_y hex) {
   }
 }
 
+/* Assumes vex is a base-32 digit
+ */
+static inline c3_s _cs_viz_val(c3_y viz) {
+
+  if ( viz > '9' ) { 
+    return (viz - 'a') + 10;
+  }
+
+  else { 
+    return viz - '0';
+  }
+
+}
+
+/* Assumes wiz is a base-64 digit
+ */
+static inline c3_s _cs_wiz_val(c3_y wiz) {
+  
+  if ( wiz == '~' ) {
+    return 63; 
+  }
+  if ( wiz >= 'a' ) { 
+    return wiz - 'a' + 10; 
+  }
+  if ( wiz >= 'A' ) { 
+    return wiz - 'A' + 36; 
+  }
+  if ( wiz >= '0' ) { 
+    return wiz - '0'; 
+  }
+  // -
+  else {
+    return 62;
+  }
+}
+
+
 /* ++day, parse a maximum 2 digit decimal number, greater than 0
  */
 static inline c3_o _cs_day(c3_s* num, c3_w* len_w, c3_y** byt_yp)
@@ -2665,9 +2702,6 @@ u3s_sift_ui(u3_noun a)
   return u3s_sift_ui_bytes(len_w, byt_y);
 }
 
-/* u3s_sift_ux_bytes: parse @ux
- */
-
 #define PFIXD(a,b) { \
   if ( len_w < 2) { \
     return u3_none; \
@@ -2679,6 +2713,294 @@ u3s_sift_ui(u3_noun a)
   byt_y += 2; \
 } 
 
+/* u3s_sift_uv_bytes: parse @uv
+ */
+u3_weak 
+u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse the 0v prefix
+  //
+  PFIXD('0', 'v');
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse 0v0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  /* Parse a small 64-bit viz number
+   */
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head 
+  for ( size_t i = 0; i < 5; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_viz_val(*byt_y);
+
+    if ( dit_s < 32) {
+      val_d <<= 5;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+  // Parse a big viz
+  else {
+    mpz_t val_mp; 
+    mpz_init2(val_mp, 128);
+    mpz_set_ui(val_mp, val_d);
+
+    val_d = 0;
+
+    /* Parse a list of dog followed by
+     * a quintuple of viz digits
+     */
+    size_t dit = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_uv_fail;
+      }
+
+      for ( size_t i = 0; i < 5; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_uv_fail;
+        }
+
+        dit_s = _cs_viz_val(*byt_y);
+
+        if ( dit_s < 32) {
+          val_d <<= 5;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_uv_fail;
+        }
+
+        byt_y++;
+        len_w--;
+        dit++;
+
+        // Read 12 digits 
+        if ( dit == 12 ) {
+          mpz_mul_2exp(val_mp, val_mp, dit*5);
+          mpz_add_ui(val_mp, val_mp, val_d);
+
+          val_d = 0;
+          dit = 0;
+        }
+      }
+
+    }
+
+    if ( dit ) {
+      mpz_mul_2exp(val_mp, val_mp, dit*5);
+      mpz_add_ui(val_mp, val_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_uv_fail:
+      mpz_clear(val_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(val_mp);
+  }
+
+}
+
+u3_weak 
+u3s_sift_uv(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_uv_bytes(len_w, byt_y);
+}
+
+/* u3s_sift_uw_bytes: parse @uw
+ */
+u3_weak 
+u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse the 0w prefix
+  //
+  PFIXD('0', 'w');
+
+  if ( ! len_w ) {
+    return u3_none;
+  }
+
+  // Parse 0w0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  c3_d val_d = 0;
+  c3_s dit_s = 0;
+
+  // Parse the head 
+  for ( size_t i = 0; i < 5; i++ ) {
+
+    if ( ! len_w ) {
+      break;
+    }
+
+    dit_s = _cs_wiz_val(*byt_y);
+
+    if ( dit_s < 64) {
+      val_d <<= 6;
+      val_d += dit_s;
+    }
+    else {
+      break;
+    }
+
+    byt_y++;
+    len_w--;
+  }
+
+  if ( !len_w ) {
+    return u3i_chub(val_d);
+  }
+  // Parse the tail
+  else {
+    mpz_t val_mp; 
+    mpz_init2(val_mp, 128);
+    mpz_set_ui(val_mp, val_d);
+
+    val_d = 0;
+
+    /* Parse a list of dog followed by
+     * a quintuple of vex digits
+     */
+    size_t dit = 0;
+
+    while ( len_w ) {
+
+      if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
+        goto sift_uv_fail;
+      }
+
+      for ( size_t i = 0; i < 5; i++ ) {
+
+        if ( ! len_w ) {
+          goto sift_uv_fail;
+        }
+
+        dit_s = _cs_wiz_val(*byt_y);
+
+        if ( dit_s < 64) {
+          val_d <<= 6;
+          val_d += dit_s;
+        }
+        else {
+          goto sift_uv_fail;
+        }
+
+        byt_y++;
+        len_w--;
+        dit++;
+
+        if ( dit == 10) {
+          mpz_mul_2exp(val_mp, val_mp, dit*6);
+          mpz_add_ui(val_mp, val_mp, val_d);
+
+          val_d = 0;
+          dit = 0;
+        }
+      }
+
+    }
+
+    if ( dit ) {
+      mpz_mul_2exp(val_mp, val_mp, dit*6);
+      mpz_add_ui(val_mp, val_mp, val_d);
+    }
+
+    if ( len_w ) {
+sift_uv_fail:
+      mpz_clear(val_mp);
+      return u3_none;
+    }
+
+    return u3i_mp(val_mp);
+  }
+
+}
+
+u3_weak 
+u3s_sift_uw(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_uw_bytes(len_w, byt_y);
+}
+/* u3s_sift_ux_bytes: parse @ux
+ */
 u3_weak 
 u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
 {
@@ -2784,13 +3106,13 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
     while ( len_w ) {
 
       if ( ! _(_cs_dot(&len_w, &byt_y)) ) {
-        return u3_none;
+        goto sift_ux_fail;
       }
 
       for ( size_t i = 0; i < 4; i++ ) {
 
         if ( ! len_w ) {
-          return u3_none;
+          goto sift_ux_fail;
         }
 
         dit_s = _cs_hex_val(*byt_y);
@@ -2800,7 +3122,7 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
           val_d += dit_s;
         }
         else {
-          return u3_none;
+          goto sift_ux_fail;
         }
 
         byt_y++;
@@ -2822,6 +3144,12 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
     if ( cuk ) {
       mpz_mul_2exp(val_mp, val_mp, cuk*16);
       mpz_add_ui(val_mp, val_mp, val_d);
+    }
+
+    if ( len_w ) { 
+sift_ux_fail:
+      mpz_clear(val_mp);
+      return u3_none;
     }
 
     return u3i_mp(val_mp);
