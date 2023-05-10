@@ -8,13 +8,17 @@
 
 #include <ctype.h>
 
-u3_atom
-u3qe_scot(u3_atom a, u3_atom b)
+u3_noun 
+u3qe_scot(u3_atom a, u3_atom b) 
 {
+
   switch (a) {
-    case c3__tas: return u3k(b);
 
     case c3__da:  return u3s_etch_da(b);
+
+    case c3__tas: return u3k(b);
+
+    case 'p': return u3s_etch_p(b);
 
     case c3__ud:  return u3s_etch_ud(b);
     case c3__ui:  return u3s_etch_ui(b);
@@ -29,7 +33,9 @@ u3qe_scot(u3_atom a, u3_atom b)
 u3_noun
 u3we_scot(u3_noun cor)
 {
-  u3_atom a, b;
+  u3_noun a, b;
+  
   u3x_mean(cor, u3x_sam_2, &a, u3x_sam_3, &b, 0);
+
   return u3qe_scot(u3x_atom(a), u3x_atom(b));
 }
