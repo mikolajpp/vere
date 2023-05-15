@@ -1735,8 +1735,6 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
     c3_w    b_w;
     size_t  dif_i;
 
-    // Initialize mp integer b with initial space
-    // for 10-bit number. Q: why 10 bit? 
     mpz_init2(b_mp, 10);
 
     if ( !mpz_size(a_mp) ) {
@@ -2837,11 +2835,9 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
 
       if ( c3y == u3a_is_cat(pun_d) ) {
-          fprintf(stderr, "Checkpoint sun 1\r\n");
           return (u3_atom) u3qe_fynd_ob(pun_d);
       }
       else {
-          fprintf(stderr, "Checkpoint sun 2\r\n");
           u3_atom pun = u3i_chub(pun_d);
           u3_atom sun = u3qe_fynd_ob(pun);
           u3z(pun);
