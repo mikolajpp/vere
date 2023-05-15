@@ -86,7 +86,7 @@ _main_readw_loom(const c3_c* arg_c, c3_y* out_y)
   c3_w lom_w;
   c3_o res_o = _main_readw(optarg, u3a_bits_max + 1, &lom_w);
   if ( res_o == c3n || (lom_w < 20) ) {
-    fprintf(stderr, "error: --%s must be >= 20 and <= %u\r\n", arg_c, u3a_bits_max);
+    fprintf(stderr, "error: --%s must be >= 20 and <= %zu\r\n", arg_c, u3a_bits_max);
     return -1;
   }
   *out_y = lom_w;
@@ -120,7 +120,7 @@ _main_repath(c3_c* pax_c)
   c3_w  len_w;
   c3_i  wit_i;
 
-  c3_assert(pax_c);
+  u3_assert(pax_c);
   if ( 0 != (rel_c = realpath(pax_c, 0)) ) {
     return rel_c;
   }
@@ -129,10 +129,10 @@ _main_repath(c3_c* pax_c)
     c3_c rec_c[2048];
 
     wit_i = snprintf(rec_c, sizeof(rec_c), "./%s", pax_c);
-    c3_assert(sizeof(rec_c) > wit_i);
+    u3_assert(sizeof(rec_c) > wit_i);
     return _main_repath(rec_c);
   }
-  c3_assert(u3_unix_cane(fas_c + 1));
+  u3_assert(u3_unix_cane(fas_c + 1));
   *fas_c = 0;
   dir_c = realpath(pax_c, 0);
   *fas_c = '/';
@@ -142,7 +142,7 @@ _main_repath(c3_c* pax_c)
   len_w = strlen(dir_c) + strlen(fas_c) + 1;
   rel_c = c3_malloc(len_w);
   wit_i = snprintf(rel_c, len_w, "%s%s", dir_c, fas_c);
-  c3_assert(len_w == wit_i + 1);
+  u3_assert(len_w == wit_i + 1);
   c3_free(dir_c);
   return rel_c;
 }
@@ -181,6 +181,7 @@ _main_init(void)
   u3_Host.ops_u.hap_w = 50000;
   u3_Host.ops_u.kno_w = DefaultKernel;
 
+  u3_Host.ops_u.sap_w = 120;    /* aka 2 minutes */
   u3_Host.ops_u.lut_y = 31;     /* aka 2G */
   u3_Host.ops_u.lom_y = 31;
 }
@@ -244,6 +245,7 @@ _main_getopt(c3_i argc, c3_c** argv)
     { "ames-port",           required_argument, NULL, 'p' },
     { "http-port",           required_argument, NULL, c3__http },
     { "https-port",          required_argument, NULL, c3__htls },
+    { "snap-time",           required_argument, NULL, c3__snap },
     { "no-conn",             no_argument,       NULL, c3__noco },
     { "no-dock",             no_argument,       NULL, c3__nodo },
     { "quiet",               no_argument,       NULL, 'q' },
@@ -304,6 +306,16 @@ _main_getopt(c3_i argc, c3_c** argv)
       }
       case c3__nodo: {
         u3_Host.ops_u.doc = c3n;
+        break;
+      }
+      case c3__snap: {
+        if ( c3n == _main_readw(optarg, 65536, &arg_w) ) {
+          return c3n;
+        } else {
+          u3_Host.ops_u.sap_w = arg_w * 60;
+          if ( 0 == u3_Host.ops_u.sap_w) 
+            return c3n;
+        }
         break;
       }
       //  opts with args
@@ -727,6 +739,7 @@ u3_ve_usage(c3_i argc, c3_c** argv)
     "-p, --ames-port PORT          Set the ames port to bind to\n",
     "    --http-port PORT          Set the http port to bind to\n",
     "    --https-port PORT         Set the https port to bind to\n",
+    "    --snap-time TIME          Set the snapshotting rate in minutes (> 0)\n",
     "-q, --quiet                   Quiet\n",
     "-R, --versions                Report urbit build info\n",
     "-r, --replay-from NUMBER      Load snapshot from event\n",
@@ -1006,12 +1019,12 @@ _cw_init_io(uv_loop_t* lup_u)
   {
     c3_i err_i;
     err_i = uv_timer_init(lup_u, &inn_u.tim_u);
-    c3_assert(!err_i);
+    u3_assert(!err_i);
     err_i = uv_pipe_init(lup_u, &inn_u.pyp_u, 0);
-    c3_assert(!err_i);
+    u3_assert(!err_i);
     uv_pipe_open(&inn_u.pyp_u, inn_i);
     err_i = uv_pipe_init(lup_u, &out_u.pyp_u, 0);
-    c3_assert(!err_i);
+    u3_assert(!err_i);
     uv_pipe_open(&out_u.pyp_u, out_i);
 
     uv_stream_set_blocking((uv_stream_t*)&out_u.pyp_u, 1);
@@ -1305,7 +1318,7 @@ _cw_eval(c3_i argc, c3_c* argv[])
   {
     c3_i err_i;
     err_i = uv_pipe_init(uv_default_loop(), &std_u.pyp_u, 0);
-    c3_assert(!err_i);
+    u3_assert(!err_i);
     uv_pipe_open(&std_u.pyp_u, 1);
 
     std_u.ptr_v = NULL;
@@ -1438,25 +1451,51 @@ _cw_eval(c3_i argc, c3_c* argv[])
 static void
 _cw_info(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
-      }
-    } break;
+  c3_i lid_i, ch_i;
+  c3_w arg_w;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
-      exit(1);
-    } break;
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
   }
 
-  c3_d     eve_d = u3m_boot(u3_Host.dir_c, u3a_bytes);
+  //  argv[optind] is always "info"
+  //
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  c3_d     eve_d = u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3_disk* log_u = _cw_disk_init(u3_Host.dir_c);
 
   fprintf(stderr, "\r\nurbit: %s at event %" PRIu64 "\r\n",
@@ -1475,25 +1514,51 @@ _cw_info(c3_i argc, c3_c* argv[])
 static void
 _cw_grab(c3_i argc, c3_c* argv[])
 {
-  switch ( argc ) {
-    case 2: {
-      if ( !(u3_Host.dir_c = _main_pier_run(argv[0])) ) {
-        fprintf(stderr, "unable to find pier\r\n");
-        exit (1);
-      }
-    } break;
+  c3_i lid_i, ch_i;
+  c3_w arg_w;
 
-    case 3: {
-      u3_Host.dir_c = argv[2];
-    } break;
+  static struct option lop_u[] = {
+    { "loom", required_argument, NULL, c3__loom },
+    { NULL, 0, NULL, 0 }
+  };
 
-    default: {
-      fprintf(stderr, "invalid command\r\n");
-      exit(1);
-    } break;
+  u3_Host.dir_c = _main_pier_run(argv[0]);
+
+  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+    switch ( ch_i ) {
+      case c3__loom: {
+        if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
+          exit(1);
+        }
+      } break;
+
+      case '?': {
+        fprintf(stderr, "invalid argument\r\n");
+        exit(1);
+      } break;
+    }
   }
 
-  u3m_boot(u3_Host.dir_c, u3a_bytes);
+  //  argv[optind] is always "grab"
+  //
+  if ( !u3_Host.dir_c ) {
+    if ( optind + 1 < argc ) {
+      u3_Host.dir_c = argv[optind + 1];
+    }
+    else {
+      fprintf(stderr, "invalid command, pier required\r\n");
+      exit(1);
+    }
+
+    optind++;
+  }
+
+  if ( optind + 1 != argc ) {
+    fprintf(stderr, "invalid command\r\n");
+    exit(1);
+  }
+
+  u3m_boot(u3_Host.dir_c, (size_t)1 << u3_Host.ops_u.lom_y);
   u3C.wag_w |= u3o_hashless;
   u3_serf_grab();
   u3m_stop();
@@ -1579,22 +1644,28 @@ _cw_cram(c3_i argc, c3_c* argv[])
 static void
 _cw_queu(c3_i argc, c3_c* argv[])
 {
-  c3_i ch_i, lid_i;
-  c3_w arg_w;
+  c3_i  lid_i, ch_i;
+  c3_w  arg_w;
+  c3_c* roc_c = 0;
 
   static struct option lop_u[] = {
-    { "loom", required_argument, NULL, c3__loom },
+    { "loom",        required_argument, NULL, c3__loom },
+    { "replay-from", required_argument, NULL, 'r' },
     { NULL, 0, NULL, 0 }
   };
 
   u3_Host.dir_c = _main_pier_run(argv[0]);
 
-  while ( -1 != (ch_i=getopt_long(argc, argv, "", lop_u, &lid_i)) ) {
+  while ( -1 != (ch_i=getopt_long(argc, argv, "r:", lop_u, &lid_i)) ) {
     switch ( ch_i ) {
       case c3__loom: {
         if (_main_readw_loom("loom", &u3_Host.ops_u.lom_y)) {
           exit(1);
         }
+      } break;
+
+      case 'r': {
+        roc_c = strdup(optarg);
       } break;
 
       case '?': {
@@ -1604,9 +1675,13 @@ _cw_queu(c3_i argc, c3_c* argv[])
     }
   }
 
+  if ( !roc_c ) {
+    fprintf(stderr, "invalid command, -r $EVENT required\r\n");
+    exit(1);
+  }
+
   //  argv[optind] is always "queu"
   //
-
   if ( !u3_Host.dir_c ) {
     if ( optind + 1 < argc ) {
       u3_Host.dir_c = argv[optind + 1];
@@ -1624,11 +1699,10 @@ _cw_queu(c3_i argc, c3_c* argv[])
     exit(1);
   }
 
-  c3_c* eve_c;
-  c3_d  eve_d;
+  c3_d eve_d;
 
-  if ( 1 != sscanf(eve_c, "%" PRIu64 "", &eve_d) ) {
-    fprintf(stderr, "urbit: queu: invalid number '%s'\r\n", eve_c);
+  if ( 1 != sscanf(roc_c, "%" PRIu64 "", &eve_d) ) {
+    fprintf(stderr, "urbit: queu: invalid number '%s'\r\n", roc_c);
     exit(1);
   }
   else {
@@ -2215,7 +2289,7 @@ _cw_vere(c3_i argc, c3_c* argv[])
         fprintf(stderr, "vere: next (%%%s): %s\n", pac_c, ver_c);
       } break;
 
-      default: c3_assert(0);
+      default: u3_assert(0);
     }
   }
 
@@ -2287,7 +2361,7 @@ _cw_vile(c3_i argc, c3_c* argv[])
 
 
   switch ( u3h(res) ) {
-    default: c3_assert(0);
+    default: u3_assert(0);
 
     case c3n: {
       fprintf(stderr, "vile: unable to retrieve key file\r\n");
@@ -2402,7 +2476,7 @@ main(c3_i   argc,
   //  parse for subcommands
   //
   switch ( _cw_utils(argc, argv) ) {
-    default: c3_assert(0);
+    default: u3_assert(0);
 
     //  no matching subcommand, parse arguments
     //
