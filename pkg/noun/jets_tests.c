@@ -886,7 +886,6 @@ _test_sift_p(void)
   c3_i ret_i = 1;
 
   ret_i &= _p_good(0x0, "~zod");
-
   ret_i &= _p_good(0x3, "~wes");
   ret_i &= _p_good(0x10, "~ryp");
   ret_i &= _p_good(0x17, "~dep");

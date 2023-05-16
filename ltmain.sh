@@ -1,0 +1,1 @@
+/nix/store/8gvrz3vlhannj4f8r8m0faib1g2pvpzs-libtool-2.4.7/share/libtool/build-aux/ltmain.sh
