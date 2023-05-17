@@ -2161,34 +2161,43 @@ u3s_etch_uw_c(u3_atom a, c3_c** out_c)
 #define HEXDIGIT(a) (( (a) >= '0' && (a) <= '9') || \
       ((a) >= 'a' && (a) <= 'f' ))
 
-/* Assumes hex is a hex digit
- */
 static inline c3_s _cs_hex_val(c3_y hex) {
 
   if ( hex > '9' ) {
-    return (hex - 'a') + 10;
+    if ( hex < 'a' ) {
+      return -1;
+    }
+    // hex >= 'a'
+    else {
+      return (hex - 'a') + 10;
+    }
   }
+  // hex <= '9'
   else {
     return hex - '0';
   }
 }
 
-/* Assumes vex is a base-32 digit
- */
 static inline c3_s _cs_viz_val(c3_y viz) {
 
   if ( viz > '9' ) { 
-    return (viz - 'a') + 10;
+    if ( viz < 'a' ) {
+      return -1;
+    }
+    // viz >= 'a'
+    else {
+      return (viz - 'a') + 10;
+    }
   }
 
+  // viz <= '9'
   else { 
+    // XX verify unsigned arithmetic in C
     return viz - '0';
   }
 
 }
 
-/* Assumes wiz is a base-64 digit
- */
 static inline c3_s _cs_wiz_val(c3_y wiz) {
   
   if ( wiz == '~' ) {
@@ -2198,15 +2207,23 @@ static inline c3_s _cs_wiz_val(c3_y wiz) {
     return wiz - 'a' + 10; 
   }
   if ( wiz >= 'A' ) { 
+    if ( wiz > 'Z' ) {
+      return -1;
+    }
     return wiz - 'A' + 36; 
   }
   if ( wiz >= '0' ) { 
+    if ( wiz > '9' ) {
+      return -1;
+    }
     return wiz - '0'; 
   }
-  // -
-  else {
+
+  if ( wiz == '-' ) {
     return 62;
   }
+
+  return -1;
 }
 
 
@@ -2704,12 +2721,12 @@ c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
   b = *(byt_y + 1);
   c = *(byt_y + 2);
 
-  *byt_yp += 3;
-  *len_w -= 3;
-
   if ( ! arelower(a,b,c) ) {
     return -1;
   }
+
+  *byt_yp += 3;
+  *len_w -= 3;
 
   return u3_po_find_prefix(a,b,c);
 }
@@ -2727,12 +2744,12 @@ c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
   b = *(byt_y + 1);
   c = *(byt_y + 2);
 
-  *byt_yp += 3;
-  *len_w -= 3;
-
   if ( ! arelower(a,b,c) ) {
     return -1;
   }
+
+  *byt_yp += 3;
+  *len_w -= 3;
 
   return u3_po_find_suffix(a,b,c);
 }
@@ -2771,7 +2788,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
 
   puf_s = _cs_parse_prefix(&len_w, &byt_y);
 
-  if ( puf_s > 0xff ) {
+  if ( puf_s > 0xff) {
     return u3_none;
   }
 
@@ -2783,8 +2800,8 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
 
   pun_d = (puf_s << 8 ) + suf_s;
 
-  // A star
-  if ( !len_w ) {
+  // A star, disallow ~doz for prefix
+  if ( !len_w && puf_s > 0 ) {
     return (u3_atom) pun_d;
   }
 
@@ -2795,7 +2812,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
 
   size_t hak = 1;
 
-  // Parse words (64-bit)
+  // Parse up to 3 head words (64-bit)
   //
   while ( len_w && hak < 4) {
 
@@ -2806,19 +2823,17 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     byt_y++;
     len_w--;
 
-    if ( 0 == (hak % 4) ) {
-      // Another word separated by --
-      if ( *byt_y != '-' || len_w < 7) {
-        return u3_none;
+    puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
+    if ( puf_s > 0xff ) {
+      // --, end of head
+      if ( *byt_y == '-' ) {
+        break;
       }
 
-      byt_y++;
-      len_w--;
-    }
-
-    puf_s = _cs_parse_prefix(&len_w, &byt_y);
-    if ( puf_s > 0xff ) {
-      return u3_none;
+      else { 
+        return u3_none;
+      }
     }
 
     suf_s = _cs_parse_suffix(&len_w, &byt_y);
@@ -2846,7 +2861,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
       }
   }
 
-  /* Parse a big address
+  /* Parse a big address in quadruples
    */
   mpz_t pun_mp;
   mpz_init2(pun_mp, 128);
@@ -2854,21 +2869,27 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   mpz_set_ui(pun_mp, pun_d);
   pun_d = 0;
 
+  hak = 0;
+
+  // Rewind to separating --
+  byt_y -= 1;
+  len_w += 1;
+
   // Parse in 64-bit chunks
   //
   while ( len_w ) {
 
     if ( *byt_y != '-') { 
-      return u3_none;
+      goto sift_p_fail;
     }
 
     byt_y++;
     len_w--;
 
     if ( 0 == (hak % 4) ) {
-      // Another word separated by --
+      // Separated by --
       if ( *byt_y != '-' || len_w < 7) {
-        return u3_none;
+        goto sift_p_fail;
       }
 
       byt_y++;
@@ -2877,12 +2898,12 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
 
     puf_s = _cs_parse_prefix(&len_w, &byt_y);
     if ( puf_s > 0xff ) {
-      return u3_none;
+      goto sift_p_fail;
     }
 
     suf_s = _cs_parse_suffix(&len_w, &byt_y);
     if ( suf_s > 0xff ) {
-      return u3_none;
+      goto sift_p_fail;
     }
 
     pun_d <<= 16;
@@ -2899,22 +2920,23 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     }
   }
 
+  // Uneven number of words
   if ( hak ) { 
-    mpz_mul_2exp(pun_mp, pun_mp, 64);
-    mpz_add_ui(pun_mp, pun_mp, pun_d);
+    goto sift_p_fail;
   }
 
-  if ( ! len_w ) {
-    u3_atom pun = u3i_mp(pun_mp);
-    u3_atom sun = u3qe_fynd_ob(pun);
-    u3z(pun);
+  if ( len_w ) {
+sift_p_fail:
 
-    return sun;
-  }
-
-  fprintf(stderr, "u3s_sift_p_bytes: parsing failure\r\n");
-
+  mpz_clear(pun_mp);
   return u3_none;
+  }
+
+  u3_atom pun = u3i_mp(pun_mp);
+  u3_atom sun = u3qe_fynd_ob(pun);
+  u3z(pun);
+
+  return sun;
 }
 
 /* u3s_sift_p: parse @p.
@@ -3401,6 +3423,7 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
         if ( ! len_w ) {
           goto sift_uw_fail;
         }
+
 
         dit_s = _cs_wiz_val(*byt_y);
 
