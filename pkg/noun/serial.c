@@ -2192,7 +2192,6 @@ static inline c3_s _cs_viz_val(c3_y viz) {
 
   // viz <= '9'
   else { 
-    // XX verify unsigned arithmetic in C
     return viz - '0';
   }
 
@@ -2200,30 +2199,58 @@ static inline c3_s _cs_viz_val(c3_y viz) {
 
 static inline c3_s _cs_wiz_val(c3_y wiz) {
   
-  if ( wiz == '~' ) {
-    return 63; 
-  }
-  if ( wiz >= 'a' ) { 
-    return wiz - 'a' + 10; 
-  }
-  if ( wiz >= 'A' ) { 
-    if ( wiz > 'Z' ) {
+  if ( wiz > '9' ) {
+
+    if ( wiz < 'A' ) {
       return -1;
     }
-    return wiz - 'A' + 36; 
-  }
-  if ( wiz >= '0' ) { 
-    if ( wiz > '9' ) {
-      return -1;
+
+    // wiz >= 'A'
+    else { 
+
+      if ( wiz > 'Z' ) {
+
+        if ( wiz < 'a' ) {
+          return -1;
+        }
+
+        // wiz >= 'a'
+        else {
+
+          if ( wiz > 'z' ) {
+
+            if ( wiz == '~' ) {
+              return 63;
+            }
+
+            else {
+              return -1;
+            }
+          }
+          // 'a' <= wiz <= 'z'
+          else {
+            return wiz - 'a' + 10;
+          }
+
+        }
+      }
+
+      // 'A' <= wiz <= 'Z'
+      else {
+        return wiz - 'A' + 36;
+      }
     }
-    return wiz - '0'; 
-  }
 
-  if ( wiz == '-' ) {
-    return 62;
   }
-
-  return -1;
+  // wiz <= '9'
+  else {
+    if ( wiz == '-' ) {
+      return 62;
+    }
+    else {
+      return wiz - '0';
+    }
+  }
 }
 
 
