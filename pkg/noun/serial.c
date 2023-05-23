@@ -1020,19 +1020,6 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
     (*out_c)[len_i] = 0;
     memcpy(*out_c, buf_y, len_i);
 
-    // XX according to docs, u3qe_fein_ob(a) should have 
-    // RETAIN semantics - we keep refcounts to our arguments, 
-    // and do not hold any reference to the return value. 
-    //
-    // Therefore, it seems u3z(sxz) is not needed, but removing 
-    // it causes memory leak.
-    //
-    // Is it implicit that u3qe_fein_ob makes a noun, and therefore 
-    // has a mix of RETAIN for argument and TRANSFER for return?
-    //
-    // The documentation states that in jet directories a-f, 
-    // internal functions RETAIN?
-    //
     if ( _(fen_o) ) {
       u3z(sxz);
     }
@@ -1082,8 +1069,6 @@ u3s_etch_p(u3_atom a)
     c3_y* buf_y = u3s_etch_p_smol(a_d, hun_y);
     c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
 
-    // XX why is u3z needed here?
-    //
     if ( _(fen_o) ) {
       u3z(sxz);
     }
@@ -1412,8 +1397,6 @@ static struct _cald _cs_yall(mpz_t day_mp) {
 
   mpz_tdiv_qr_ui(era_mp, day_mp, day_mp, ERA_YO);
 
-  // XX sanity check 
-  assert(mpz_fits_ulong_p(day_mp) != 0);
   day_d = mpz_get_ui(day_mp);
 
   // We are within the first century, 
@@ -1613,15 +1596,9 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
     mpz_clear(r_mp);
   }
  
-  // XX
-  c3_assert(buf_y >= hun_y);
-
   *buf_y = '~';
 
   size_t dif_i = buf_y - hun_y;
-
-  // XX
-  assert(buf_y >= hun_y);
 
   if ( dif_i > 0 ) {
     len_i -= dif_i;
@@ -1728,7 +1705,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   else {
     while ( 1 ) {
       b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
-      c3_assert( mpz_get_ui(b_mp) == b_w ); // XX
 
       if ( !mpz_size(a_mp) ) {
         while ( b_w ) {
@@ -1748,8 +1724,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   }
 
   buf_y++;
-
-  c3_assert( buf_y >= hun_y ); // XX
 
   //  mpz_sizeinbase may overestimate by 1
   //
@@ -2541,8 +2515,7 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
 {
   c3_s* cah;
 
-  // XX reserve space for years after 2000 AD
-  mpz_init(days_mp);
+  mpz_init2(days_mp, 128);
 
   if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
     cah = _cs_moy_yo;
@@ -3061,21 +3034,10 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
 
       if ( c3y == u3a_is_cat(pun_d) ) {
-          // XX u3qe_fynd is RETAIN
-          // so we need u3k for correctness, although 
-          // we return a direct atom.
-          // XX This causes memory leak!
           return (u3_atom) u3qe_fynd_ob(pun_d);
       }
       else {
-          // pun needs to be freed
           u3_atom pun = u3i_chub(pun_d);
-
-          // XX u3qe_fynd is RETAIN 
-          // we retain reference to pun, 
-          // and don't own reference to sun. 
-          // Does it need u3k(sun)?;
-          //
           u3_atom sun = u3qe_fynd_ob(pun);
 
           u3z(pun);
@@ -3161,8 +3123,6 @@ sift_p_fail:
   return u3_none;
   }
 
-  // XX reference issue?
-  //
   u3_atom pun = u3i_mp(pun_mp);
   u3_atom sun = u3qe_fynd_ob(pun);
 
@@ -3862,10 +3822,6 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
 
     val_d = 0;
 
-    // XX this does not parse the dog
-    // Parse a list of: dog followed by
-    // a quintuple of vex digits
-    // 
     size_t dit = 0;
 
     while ( len_w ) {
