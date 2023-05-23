@@ -60,6 +60,16 @@ _da_etch(mpz_t a_mp, const c3_c* dat_c)
     mpz_add_ui(dat_mp, dat_mp, lo); \
   } \
 
+#define _init_date_atom_big(mp, ex, hi, lo) \
+  { \
+    mpz_init(mp); \
+    mpz_set_ui(dat_mp, ex); \
+    mpz_mul_2exp(dat_mp, dat_mp, 64); \
+    mpz_add_ui(dat_mp, dat_mp, hi); \
+    mpz_mul_2exp(dat_mp, dat_mp, 64); \
+    mpz_add_ui(dat_mp, dat_mp, lo); \
+  } \
+
 static c3_i
 _test_etch_da(void)
 {
@@ -135,6 +145,18 @@ _test_etch_da(void)
       0x8000700808c7aec0,
       0x2d00000000000000);
   ret_i &= _da_etch(dat_mp, "~3903639.9.11..12.46.56..2d00");
+
+  _init_date_atom_big(dat_mp,
+      0xcafeabcd,
+      0x8000000d330a6fca,
+      0xd022000000000000);
+  ret_i &= _da_etch(dat_mp, "~1990808568848630424650.2.5..23.52.42..d022");
+
+  _init_date_atom_big(dat_mp,
+      0xcafeabcd,
+      0x8000000d330a6fca,
+      0xd0220000cafe0000);
+  ret_i &= _da_etch(dat_mp, "~1990808568848630424650.2.5..23.52.42..d022.0000.cafe");
 
   return ret_i;
 }

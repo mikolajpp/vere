@@ -1124,7 +1124,12 @@ static c3_s _cs_moy_yo[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
  */
 struct _tarp {
 
-  mpz_t day_mp; // days
+  // days
+  union { 
+    mpz_t day_mp;  // big
+    c3_d  day_d;   // smol
+  };
+  c3_o dag_o;  // is day big?
 
   c3_w  hor_w;  // hours
   c3_w  mit_w;  // minutes
@@ -1197,14 +1202,15 @@ static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
 
   len_i += 1; // .
 
-  // XX Can we optimize for BC?
-  //
-  if ( ger->yad_o == c3n ) { 
-    len_i += ceil(log10(ger->yer_d));
-    len_i += 1; // -
+  if ( _(rip->dag_o) ) {
+    len_i += mpz_sizeinbase(ger->yer_mp, 10);
   }
   else {
-    len_i += mpz_sizeinbase(ger->yer_mp, 10);
+    len_i += ceil(log10(ger->yer_d))+1;
+  }
+
+  if ( !_(ger->yad_o) ) {
+    len_i += 1; // - 
   }
 
   len_i += 1; // ~
@@ -1237,20 +1243,34 @@ static struct _tarp _cs_yell(u3_atom a) {
   }
 
   c3_d sec_d;
-
   sec_a = u3qc_rsh(6, 1, a);
-  u3r_mp(sec_mp, sec_a);
-
-  mpz_init2(rip.day_mp, 64+32);
 
   if ( c3y == u3r_safe_chub(sec_a, &sec_d) ) {
-    mpz_set_ui(rip.day_mp, sec_d / DAY_YO);
+    rip.day_d = sec_d / DAY_YO;
     rip.sec_w = sec_d % DAY_YO;
+
+    rip.dag_o = c3n;
   }
 
   else {
+    u3r_mp(sec_mp, sec_a);
+    mpz_init2(rip.day_mp, 64+32);
+
     mpz_tdiv_qr_ui(rip.day_mp, sec_mp, sec_mp, DAY_YO);
     rip.sec_w = mpz_get_ui(sec_mp);
+
+    if ( mpz_fits_ulong_p(rip.day_mp) ) {
+      rip.day_d = mpz_get_ui(rip.day_mp);
+
+      mpz_clear(sec_mp);
+      mpz_clear(rip.day_mp);
+
+      rip.dag_o = c3n;
+    }
+    else { 
+      mpz_clear(sec_mp);
+      rip.dag_o = c3y;
+    }
   }
 
   rip.hor_w = rip.sec_w / HOR_YO;
@@ -1259,11 +1279,123 @@ static struct _tarp _cs_yell(u3_atom a) {
   rip.mit_w = rip.sec_w / MIT_YO;
   rip.sec_w %= MIT_YO;
 
+
   u3z(sec_a);
-  mpz_clear(sec_mp);
   return rip;
 }
 
+/* +yall: small day / day of year
+ */
+static struct _cald _cs_yall_smol(c3_d day_d) {
+
+  c3_d  era_d;
+  c3_d  cet_d;
+  c3_y  lep_o;
+
+  struct _cald ger;
+
+  era_d = 0;
+  ger.yer_d = 0;
+
+  era_d = day_d / ERA_YO;
+  day_d %= ERA_YO;
+
+  // We are within the first century, 
+  // and the first year is a leap year, despite
+  // it being a centurial year -- it is divisible by 400
+  //
+  if ( day_d <= CET_YO ) {
+    lep_o = c3y;
+    cet_d = 0;
+  }
+
+  // We are past the first century
+  //
+  else {
+    lep_o = c3n;
+    cet_d = 1;
+    day_d -= (CET_YO + 1);
+
+    cet_d += day_d / CET_YO;
+    day_d = day_d % CET_YO;
+
+    // yer <- yer + cet*100
+    ger.yer_d += cet_d*100;
+
+  }
+
+  // yer <- yer + era*400
+  ger.yer_d += era_d*400;
+
+  c3_d dis_d;
+  c3_d ner_d = 0;
+
+  if ( _(lep_o) ) {
+    dis_d = 366;
+  }
+  else {
+    dis_d = 365;
+  }
+
+  // Exceeded a year
+  //
+  while ( day_d >= dis_d ) {
+    ner_d += 1;
+    day_d -= dis_d;
+
+    // leap year
+    //
+    if ( !(ner_d % 4) ) {
+      lep_o = c3y;
+      dis_d = 366;
+    }
+    else {
+      lep_o = c3n;
+      dis_d = 365;
+    }
+  }
+
+  ger.yer_d += ner_d;
+
+  c3_s* cah;
+  ger.mot_s = 0;
+
+  if ( _(lep_o) ) {
+    cah = _cs_moy_yo;
+  }
+  else {
+    cah = _cs_moh_yo;
+  }
+
+  // At this point day_d < 366
+  ger.day_s = day_d;
+
+  // Count towards the month
+  //
+  while ( ger.day_s >= cah[ger.mot_s] ) {
+    ger.day_s -= cah[ger.mot_s];
+    ger.mot_s++;
+  }
+
+  ger.day_s++;
+  ger.mot_s++;
+
+  // Year before Christ
+  //
+  if ( ger.yer_d <= JES_YO ) {
+    ger.yer_d = 1 + JES_YO - ger.yer_d; // 0 AD is 1 BC
+    ger.yad_o = c3n;
+  }
+
+  // Year after Christ
+  //
+  else {
+    ger.yer_d -= JES_YO;
+    ger.yad_o = c3y;
+  }
+
+  return ger;
+}
 /* +yall: day / day of year
  */
 static struct _cald _cs_yall(mpz_t day_mp) {
@@ -1368,12 +1500,7 @@ static struct _cald _cs_yall(mpz_t day_mp) {
   //
   if ( mpz_cmp_ui(ger.yer_mp, JES_YO) <= 0 ) {
 
-    c3_d yer_d = mpz_get_ui(ger.yer_mp);
-    yer_d = 1 + JES_YO - yer_d; // 0 AD is 1 BC
-
-    mpz_clear(ger.yer_mp);
-    ger.yer_d = yer_d;
-
+    mpz_ui_sub(ger.yer_mp, 1 + JES_YO, ger.yer_mp);
     ger.yad_o = c3n;
   }
 
@@ -1456,31 +1583,27 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
   // Print out the year
   //
 
-  // Year before christ
-  //
+  // BC year
   if( ger->yad_o == c3n ) {
-
     *buf_y-- = '-';
+  }
 
+
+  // Smol year
+  //
+  if ( !_(rip->dag_o) ) {
     while ( ger->yer_d > 0 ) {
       *buf_y-- = '0' + ger->yer_d % 10;
       ger->yer_d /= 10;
     }
-
   }
 
-  // Year after Christ
-  //
   else {
 
     mpz_t r_mp;
     mpz_init(r_mp);
     c3_d dit_d;
 
-    // Extract digits
-    // yer_mp is guaranteed to be non-zero
-    //
-    // XX Optimize for small years
     while ( mpz_size(ger->yer_mp) > 0 ) {
 
       dit_d = mpz_tdiv_qr_ui(ger->yer_mp, r_mp, ger->yer_mp, 10);
@@ -1520,7 +1643,14 @@ u3s_etch_da(u3_atom a)
   size_t len_i;
 
   rip = _cs_yell(a);
-  ger = _cs_yall(rip.day_mp);
+
+  if ( !_(rip.dag_o) ) {
+    ger = _cs_yall_smol(rip.day_d);
+  }
+  else {
+    ger = _cs_yall(rip.day_mp);
+  }
+
   len_i = _cs_etch_da_size(&rip, &ger);
   
   u3i_slab sab_u;
@@ -1531,8 +1661,10 @@ u3s_etch_da(u3_atom a)
 
   _cs_etch_da_bytes(&rip, &ger, len_i, sab_u.buf_y);
 
-  mpz_clear(rip.day_mp);
-  mpz_clear(ger.yer_mp);
+  if ( _(rip.dag_o) ) {
+    mpz_clear(rip.day_mp);
+    mpz_clear(ger.yer_mp);
+  }
   return u3i_slab_mint_bytes(&sab_u);
 }
 
@@ -1547,7 +1679,13 @@ u3s_etch_da_c(u3_atom a, c3_c** out_c)
   struct _cald ger;
 
   rip = _cs_yell(a);
-  ger = _cs_yall(rip.day_mp);
+
+  if ( !_(rip.dag_o) ) {
+    ger = _cs_yall_smol(rip.day_d);
+  }
+  else {
+    ger = _cs_yall(rip.day_mp);
+  }
 
   len_i = _cs_etch_da_size(&rip, &ger);
 
@@ -1558,8 +1696,10 @@ u3s_etch_da_c(u3_atom a, c3_c** out_c)
 
   *out_c = (c3_c*)buf_y;
 
-  mpz_clear(rip.day_mp);
-  mpz_clear(ger.yer_mp);
+  if ( _(rip.dag_o) ) {
+    mpz_clear(rip.day_mp);
+    mpz_clear(ger.yer_mp);
+  }
   return len_i;
 }
 
