@@ -18,7 +18,6 @@ _parse_tas(u3_noun txt) {
   c3_c* cur = c;
   if (!islower(cur[0])) {
     u3a_free(c);
-    // XX Touches upon sanity issues. Does this match Hoon behaviour?
     return u3_none;
   }
   cur++;
@@ -26,7 +25,6 @@ _parse_tas(u3_noun txt) {
   while (cur[0] != 0) {
     if (!(islower(cur[0]) || isdigit(cur[0]) || cur[0] == '-')) {
       u3a_free(c);
-      // XX Touches upon sanity issues. Does this match Hoon behaviour?
       return u3_none;
     }
 
@@ -34,8 +32,7 @@ _parse_tas(u3_noun txt) {
   }
 
   u3a_free(c);
-  // XX do we need u3k here?
-  return txt;
+  return u3k(txt);
 }
 
 
@@ -64,9 +61,11 @@ u3qe_slaw(u3_atom a, u3_atom b)
 
   // The u3s_sift functions 
   // signal parsing failure by returning u3_none.
+  // This does not mean the input was wrong - the jet 
+  // could simply choose not to handle certain cases.
   //
   if ( res == u3_none ) {
-    return u3_nul;
+    return u3_none;
   }
 
   return u3nc(u3_nul, res);

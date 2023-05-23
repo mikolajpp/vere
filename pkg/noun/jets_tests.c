@@ -1263,6 +1263,8 @@ _ui_fail(const c3_c* num_c)
   return 1;
 }
 
+extern c3_d _cs_bit_dec(c3_d l);
+
 static c3_i
 _test_sift_ui(void)
 {
@@ -1307,7 +1309,6 @@ _test_sift_ui(void)
 
     u3z(out); u3z(pro);
   }
-
 
   {
     c3_c* num_c = "0i340282366920938463463374607431768211456";

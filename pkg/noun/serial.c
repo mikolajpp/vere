@@ -881,6 +881,8 @@ size_t _cs_etch_p_size(mpz_t a_mp) {
   return len_i;
 }
 
+/* _cs_etch_p_bytes: atom to @p impl.
+ */
 c3_y* 
 _cs_etch_p_bytes(mpz_t sxz_mp, c3_w len_w, c3_y* hun_y)
 {
@@ -928,9 +930,6 @@ _cs_etch_p_bytes(mpz_t sxz_mp, c3_w len_w, c3_y* hun_y)
       byt_y -= 2;
       len_w -= 2;
     }
-
-    // XX
-    assert(byt_y >= hun_y);
   }
 
   *byt_y = '~';
@@ -939,6 +938,10 @@ _cs_etch_p_bytes(mpz_t sxz_mp, c3_w len_w, c3_y* hun_y)
 }
 
 
+/* u3s_etch_p_smol(): c3_d to @p
+**
+**   =(28 (met 3 (scot %p (dec (bex 64)))))
+*/
 c3_y*
 u3s_etch_p_smol(c3_d sxz, c3_y hun_y[SMOL_P])
 {
@@ -978,9 +981,6 @@ u3s_etch_p_smol(c3_d sxz, c3_y hun_y[SMOL_P])
       *byt_y = '-';
       byt_y--;
     }
-
-    // XX
-    assert(byt_y >= hun_y);
   }
 
   *byt_y = '~';
@@ -988,8 +988,8 @@ u3s_etch_p_smol(c3_d sxz, c3_y hun_y[SMOL_P])
   return byt_y;
 }
 
-/* u3s_etch_p(): atom to @p, as a malloc'd C string.
-*/
+/* u3s_etch_p_c(): atom to @p, as a malloc'd c string.
+ */
 size_t 
 u3s_etch_p_c(u3_atom a, c3_c** out_c)
 {
@@ -999,6 +999,7 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
   c3_y* buf_y;
 
   u3_atom sxz = a;
+  c3_o fen_o = c3n;
 
   // We only need to unscramble planets and below
   //
@@ -1006,6 +1007,7 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
       (c3y == u3a_is_cat(a) && a >= 0x10000) ) { 
 
     sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
   }
 
   if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
@@ -1018,7 +1020,23 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
     (*out_c)[len_i] = 0;
     memcpy(*out_c, buf_y, len_i);
 
-    u3z(sxz);
+    // XX according to docs, u3qe_fein_ob(a) should have 
+    // RETAIN semantics - we keep refcounts to our arguments, 
+    // and do not hold any reference to the return value. 
+    //
+    // Therefore, it seems u3z(sxz) is not needed, but removing 
+    // it causes memory leak.
+    //
+    // Is it implicit that u3qe_fein_ob makes a noun, and therefore 
+    // has a mix of RETAIN for argument and TRANSFER for return?
+    //
+    // The documentation states that in jet directories a-f, 
+    // internal functions RETAIN?
+    //
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
+
     return len_i;
   }
    
@@ -1031,29 +1049,44 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
 
   _cs_etch_p_bytes(sxz_mp, len_i, buf_y);
 
-  u3z(sxz);
-  mpz_clear(sxz_mp);
-
   *out_c = (c3_c*)buf_y;
 
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
+  mpz_clear(sxz_mp);
   return len_i;
 }
 
 /* u3s_etch_p(): atom to @p.
-*/
+ */
 u3_atom
 u3s_etch_p(u3_atom a)
 {
-  u3_atom sxz = u3qe_fein_ob(a);
-
   c3_d a_d;
+
+  u3_atom sxz = a;
+  c3_o fen_o = c3n;
+
+  // We only need to unscramble planets and below
+  //
+  if ( c3n == u3a_is_cat(a) || 
+      (c3y == u3a_is_cat(a) && a >= 0x10000) ) { 
+
+    sxz = u3qe_fein_ob(a);
+    fen_o = c3y;
+  }
 
   if ( c3y == u3r_safe_chub(sxz, &a_d) ) {
     c3_y  hun_y[SMOL_P];
     c3_y* buf_y = u3s_etch_p_smol(a_d, hun_y);
     c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
 
-    u3z(sxz);
+    // XX why is u3z needed here?
+    //
+    if ( _(fen_o) ) {
+      u3z(sxz);
+    }
     return u3i_bytes(SMOL_P - dif_w, buf_y);
   }
    
@@ -1068,13 +1101,14 @@ u3s_etch_p(u3_atom a)
 
   _cs_etch_p_bytes(sxz_mp, len_i, sab_u.buf_y);
 
+  if ( _(fen_o) ) {
+    u3z(sxz);
+  }
   mpz_clear(sxz_mp);
-  u3z(sxz);
   return u3i_slab_mint_bytes(&sab_u);
 }
 
-/* 
- * ++ yo time constants
+/* +yo time constants
  */
 #define CET_YO 36524
 #define DAY_YO 86400
@@ -1083,11 +1117,10 @@ u3s_etch_p(u3_atom a)
 #define MIT_YO 60
 #define JES_YO 292277024400
 
-static c3_s moh_yo[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-static c3_s moy_yo[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static c3_s _cs_moh_yo[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static c3_s _cs_moy_yo[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-/*
- * +tarp - parsed time
+/* +tarp - parsed time
  */
 struct _tarp {
 
@@ -1098,12 +1131,11 @@ struct _tarp {
   c3_w  sec_w;  // seconds
 
   c3_d  fan_d;  // fractional seconds
-  size_t cuk_i; // 4-bit chunks in fan_d
+  size_t cuk_i; // number 4-bit chunks in fan_d
 
 };
 
-/*
- * [year month day]
+/* [year month day]
  */
 struct _cald {
 
@@ -1113,14 +1145,13 @@ struct _cald {
     c3_d  yer_d;
   };
 
-  c3_y yad_o; // year AD?
+  // year AD?
+  c3_y yad_o; 
+
   c3_s mot_s; // month 
   c3_s day_s; // day 
 };
 
-/* _cs_etch_da_size(): compute the size estimate 
- * of the printed @da atom
- */
 static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
 {
   size_t len_i = 0;
@@ -1133,11 +1164,11 @@ static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
 
     len_i += 1; // .
 
-    // Time hh.mm.ss
-    len_i += 8+2; // + ..
+    len_i += 8+2; // hh.mm.ss + ..
   }
 
   // No fractional part 
+  //
   else {
 
     // Time hh.mm.ss
@@ -1147,7 +1178,7 @@ static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
   }
 
   // year.month.day
-  
+  //
   if ( ger->day_s < 10 ) {
     len_i += 1;
   }
@@ -1205,20 +1236,22 @@ static struct _tarp _cs_yell(u3_atom a) {
     rip.cuk_i = 0;
   }
 
-  // This could be replaced by u3r_chub(1, a)
-  // if we choose only to handle 128-bit dates 
-  //
+  c3_d sec_d;
+
   sec_a = u3qc_rsh(6, 1, a);
   u3r_mp(sec_mp, sec_a);
 
-  u3z(sec_a);
+  mpz_init2(rip.day_mp, 64+32);
 
-  // XX fast path for seconds fitting in 64-bits
-  mpz_init2(rip.day_mp, 10);
+  if ( c3y == u3r_safe_chub(sec_a, &sec_d) ) {
+    mpz_set_ui(rip.day_mp, sec_d / DAY_YO);
+    rip.sec_w = sec_d % DAY_YO;
+  }
 
-  mpz_tdiv_qr_ui(rip.day_mp, sec_mp, sec_mp, DAY_YO);
-
-  rip.sec_w = mpz_get_ui(sec_mp);
+  else {
+    mpz_tdiv_qr_ui(rip.day_mp, sec_mp, sec_mp, DAY_YO);
+    rip.sec_w = mpz_get_ui(sec_mp);
+  }
 
   rip.hor_w = rip.sec_w / HOR_YO;
   rip.sec_w %= HOR_YO;
@@ -1226,8 +1259,8 @@ static struct _tarp _cs_yell(u3_atom a) {
   rip.mit_w = rip.sec_w / MIT_YO;
   rip.sec_w %= MIT_YO;
 
+  u3z(sec_a);
   mpz_clear(sec_mp);
-
   return rip;
 }
 
@@ -1251,17 +1284,17 @@ static struct _cald _cs_yall(mpz_t day_mp) {
   assert(mpz_fits_ulong_p(day_mp) != 0);
   day_d = mpz_get_ui(day_mp);
 
-  /*fprintf(stderr, "day_d = %llu\r\n", ger.day_d);*/
-
   // We are within the first century, 
   // and the first year is a leap year, despite
   // it being a centurial year -- it is divisible by 400
+  //
   if ( day_d <= CET_YO ) {
     lep_o = c3y;
     cet_d = 0;
   }
 
   // We are past the first century
+  //
   else {
     lep_o = c3n;
     cet_d = 1;
@@ -1289,11 +1322,13 @@ static struct _cald _cs_yall(mpz_t day_mp) {
   }
 
   // Exceeded a year
+  //
   while ( day_d >= dis_d ) {
     ner_d += 1;
     day_d -= dis_d;
 
     // leap year
+    //
     if ( !(ner_d % 4) ) {
       lep_o = c3y;
       dis_d = 366;
@@ -1310,16 +1345,17 @@ static struct _cald _cs_yall(mpz_t day_mp) {
   ger.mot_s = 0;
 
   if ( _(lep_o) ) {
-    cah = moy_yo;
+    cah = _cs_moy_yo;
   }
   else {
-    cah = moh_yo;
+    cah = _cs_moh_yo;
   }
 
   // At this point day_d < 366
   ger.day_s = day_d;
 
   // Count towards the month
+  //
   while ( ger.day_s >= cah[ger.mot_s] ) {
     ger.day_s -= cah[ger.mot_s];
     ger.mot_s++;
@@ -1349,21 +1385,19 @@ static struct _cald _cs_yall(mpz_t day_mp) {
   }
 
   mpz_clear(era_mp);
-  
   return ger;
 }
-/* _cs_etch_da_bytes(): time atom to @da impl.
+/* _cs_etch_da_bytes(): atom to @da impl.
  */
 size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3_y* hun_y)
 {
 
   c3_y* buf_y = hun_y + (len_i - 1);
 
-  // Print the fractional second
-  //
   c3_s paf_s = 0x0;
 
-  // Print out the four 16-bit chunks
+  // Print out up to four 16-bit chunks
+  //
   if ( rip->fan_d > 0) {
 
     while ( rip->cuk_i > 0) {
@@ -1386,6 +1420,7 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
 
   // Print the time if the time is non-zero, or 
   // if we have printed fractional seconds
+  //
   if ( buf_y < (hun_y + len_i - 1) || ! ( rip->fan_d == 0 && rip->hor_w == 0 && rip->mit_w == 0 && rip->sec_w == 0 ) ) {
   
       *buf_y-- = '0' + ( rip->sec_w % 10 );
@@ -1418,9 +1453,10 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
   }
   *buf_y-- = '.';
 
-  // print out the year
+  // Print out the year
+  //
 
-  // year before christ
+  // Year before christ
   //
   if( ger->yad_o == c3n ) {
 
@@ -1454,21 +1490,14 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
     mpz_clear(r_mp);
   }
  
+  // XX
   c3_assert(buf_y >= hun_y);
 
   *buf_y = '~';
 
   size_t dif_i = buf_y - hun_y;
 
-  // (buf_y + (len_i - dif_i)) = 0;
-  // fprintf(stderr, "u3s_etch_da(): %s\n\r", buf_y);
-  /*fprintf(stderr, "u3s_etch_da(): dif_i = %zd\n\r", dif_i);*/
-
-  // if ( buf_y < hun_y) { 
-  // fprintf(stderr, "u3s_etch_da(): error!\n\r");
-  // return u3_none;
-  // }
-
+  // XX
   assert(buf_y >= hun_y);
 
   if ( dif_i > 0 ) {
@@ -1480,6 +1509,8 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
   return len_i;
 }
 
+/* _u3s_etch_da: atom to @da.
+ */
 u3_atom
 u3s_etch_da(u3_atom a)
 {
@@ -1487,11 +1518,6 @@ u3s_etch_da(u3_atom a)
   struct _tarp rip;
   struct _cald ger;
   size_t len_i;
-  /*
-   * +yall: day to day of year
-   *
-   * XX fast path for day_mp fitting into 64-bits
-   */
 
   rip = _cs_yell(a);
   ger = _cs_yall(rip.day_mp);
@@ -1503,15 +1529,10 @@ u3s_etch_da(u3_atom a)
   u3i_slab_bare(&sab_u, 3, len_i);
   sab_u.buf_w[sab_u.len_w - 1] = 0;
 
-
   _cs_etch_da_bytes(&rip, &ger, len_i, sab_u.buf_y);
 
   mpz_clear(rip.day_mp);
-
-  if ( _(ger.yad_o) ) { 
-    mpz_clear(ger.yer_mp);
-  }
-
+  mpz_clear(ger.yer_mp);
   return u3i_slab_mint_bytes(&sab_u);
 }
 
@@ -1538,11 +1559,7 @@ u3s_etch_da_c(u3_atom a, c3_c** out_c)
   *out_c = (c3_c*)buf_y;
 
   mpz_clear(rip.day_mp);
-
-  if ( _(ger.yad_o) ) { 
-    mpz_clear(ger.yer_mp);
-  }
-
+  mpz_clear(ger.yer_mp);
   return len_i;
 }
 
@@ -1607,7 +1624,6 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
   }
 
   mpz_clear(b_mp);
-
   return len_i;
 }
 
@@ -1616,14 +1632,15 @@ _cs_etch_ud_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 **   =(26 (met 3 (scot %ud (dec (bex 64)))))
 */
 c3_y*
-u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[26])
+u3s_etch_ud_smol(c3_d a_d, c3_y hun_y[SMOL_UD])
 {
-  c3_y*  buf_y = hun_y + 25;
+  c3_y*  buf_y = hun_y + SMOL_UD - 1;
   c3_w     b_w;
 
   if ( !a_d ) {
     *buf_y-- = '0';
   }
+
   else {
     while ( 1 ) {
       b_w  = a_d % 1000;
@@ -1657,10 +1674,10 @@ u3s_etch_ud(u3_atom a)
   c3_d a_d;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
     c3_y* buf_y = u3s_etch_ud_smol(a_d, hun_y);
     c3_w  dif_w = (c3_p)buf_y - (c3_p)hun_y;
-    return u3i_bytes(26 - dif_w, buf_y);
+    return u3i_bytes(SMOL_UD - dif_w, buf_y);
   }
 
   u3i_slab sab_u;
@@ -1688,10 +1705,10 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   c3_y*  buf_y;
 
   if ( c3y == u3r_safe_chub(a, &a_d) ) {
-    c3_y  hun_y[26];
+    c3_y  hun_y[SMOL_UD];
 
     buf_y = u3s_etch_ud_smol(a_d, hun_y);
-    len_i = 26 - ((c3_p)buf_y - (c3_p)hun_y);
+    len_i = SMOL_UD - ((c3_p)buf_y - (c3_p)hun_y);
 
     *out_c = c3_malloc(len_i + 1);
     (*out_c)[len_i] = 0;
@@ -1709,9 +1726,9 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
 
   len_i = _cs_etch_ud_bytes(a_mp, len_i, buf_y);
 
-  mpz_clear(a_mp);
-
   *out_c = (c3_c*)buf_y;
+
+  mpz_clear(a_mp);
   return len_i;
 }
 
@@ -1724,8 +1741,7 @@ _cs_etch_ui_size(mpz_t a_mp)
     return len_i + 2; // + 0i
 }
 
-/*
- * _cs_etch_ui_bytes(): atom to @ui impl.
+/* _cs_etch_ui_bytes(): atom to @ui impl.
  */
 static size_t 
 _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
@@ -1742,11 +1758,11 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
     }
     else {
         while ( 1 ) { 
-            // @ui does not have separators.
+            // XX @ui does not have separators.
             // What would be the most efficient way to extract digits?
             b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
 
-            // Verify that the returned remainder is equal to b_mp
+            // XX Verify that the returned remainder is equal to b_mp
             // Is it a sanity check? The remainder must be less than 1000, 
             // perhaps this check is not really necessary. 
             c3_assert( mpz_get_ui(b_mp) == b_w); // XX
@@ -1779,11 +1795,11 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 
     c3_assert( buf_y >= hun_y); // XX
     
-    // mpz_sizeinbase may overestimate by 1
+    // XX mpz_sizeinbase may overestimate by 1
     // therefore we might have to move 
     // the buffer to align it with the beginning of hun_y
     {
-        // Difference between allocated size and size
+        // XX Difference between allocated size and size
         // of the string put so far 
         size_t dif_i = buf_y - hun_y;
         
@@ -1793,21 +1809,19 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
             memset(hun_y + len_i, 0, dif_i);
         }
     }
-    mpz_clear(b_mp);
 
+    mpz_clear(b_mp);
     return len_i;
 }
+
 /* u3s_etch_ui_smol(): c3_d to @ui
  **
  **  =(22 (met 3 (scot %ud (dec (bex 64)))))
  */
-
-#define SMOL_UI_LEN 22
-
 c3_y*
-u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI_LEN])
+u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI])
 {
-    c3_y* buf_y = hun_y + (SMOL_UI_LEN - 1);
+    c3_y* buf_y = hun_y + SMOL_UI - 1;
     c3_w  b_w;
 
     if ( !a_d ) {
@@ -1828,7 +1842,7 @@ u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI_LEN])
     return buf_y + 1;
 }
 
-/* u3s_etch_ui(): atom to @ui
+/* u3s_etch_ui(): atom to @ui.
  */
 u3_atom
 u3s_etch_ui(u3_atom a)
@@ -1836,10 +1850,10 @@ u3s_etch_ui(u3_atom a)
     c3_d a_d;
 
     if ( c3y == u3r_safe_chub(a, &a_d) ) {
-        c3_y hun_y[SMOL_UI_LEN];
+        c3_y hun_y[SMOL_UI];
         c3_y* buf_y = u3s_etch_ui_smol(a_d, hun_y);
         c3_w dif_w = (c3_p)buf_y - (c3_p)hun_y;
-        return u3i_bytes(sizeof(hun_y) - dif_w, buf_y);
+        return u3i_bytes(SMOL_UI - dif_w, buf_y);
     }
 
     u3i_slab sab_u;
@@ -1856,7 +1870,8 @@ u3s_etch_ui(u3_atom a)
     mpz_clear(a_mp);
     return u3i_slab_mint_bytes(&sab_u);
 }
-/* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string
+
+/* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string.
  */
 size_t 
 u3s_etch_ui_c(u3_atom a, c3_c** out_c)
@@ -1866,9 +1881,9 @@ u3s_etch_ui_c(u3_atom a, c3_c** out_c)
     c3_y*  buf_y;
 
     if ( c3y == u3r_safe_chub(a, &a_d) ) {
-        c3_y hun_y[SMOL_UI_LEN];
+        c3_y hun_y[SMOL_UI];
         buf_y = u3s_etch_ui_smol(a_d, hun_y);
-        len_i = sizeof(hun_y) - ((c3_p)buf_y - (c3_p)hun_y);
+        len_i = SMOL_UI - ((c3_p)buf_y - (c3_p)hun_y);
         *out_c = c3_malloc(len_i + 1);
         (*out_c)[len_i] = 0;
         memcpy(*out_c, buf_y, len_i);
@@ -1885,9 +1900,9 @@ u3s_etch_ui_c(u3_atom a, c3_c** out_c)
 
     len_i = _cs_etch_ui_bytes(a_mp, len_i, buf_y);
 
-    mpz_clear(a_mp);
-
     *out_c = (c3_c*)buf_y;
+
+    mpz_clear(a_mp);
     return len_i;
 }
 
@@ -2157,10 +2172,20 @@ u3s_etch_uw_c(u3_atom a, c3_c** out_c)
 
 #undef _divc_nz
 
-#define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
-#define HEXDIGIT(a) (( (a) >= '0' && (a) <= '9') || \
-      ((a) >= 'a' && (a) <= 'f' ))
+/* _cs_dex_val: char to decimal digit.
+ */
+static inline c3_s _cs_dex_val(c3_y dex) {
 
+  if ( dex > '9' ) {
+    return -1;
+  }
+  else {
+    return dex  - '0';
+  }
+}
+
+/* _cs_hex_val: char to hexadecimal digit.
+ */
 static inline c3_s _cs_hex_val(c3_y hex) {
 
   if ( hex > '9' ) {
@@ -2178,6 +2203,8 @@ static inline c3_s _cs_hex_val(c3_y hex) {
   }
 }
 
+/* _cs_viz_val: char to base-32 digit.
+ */
 static inline c3_s _cs_viz_val(c3_y viz) {
 
   if ( viz > '9' ) { 
@@ -2197,6 +2224,8 @@ static inline c3_s _cs_viz_val(c3_y viz) {
 
 }
 
+/* _cs_wiz_val: char to base-64 digit.
+ */
 static inline c3_s _cs_wiz_val(c3_y wiz) {
   
   if ( wiz > '9' ) {
@@ -2253,10 +2282,11 @@ static inline c3_s _cs_wiz_val(c3_y wiz) {
   }
 }
 
+#define DIGIT(a) ( ((a) >= '0') && ((a) <= '9') )
 
-/* ++day, parse a maximum 2 digit decimal number, greater than 0
+/* +two: parse a maximum 2 digit decimal number, greater than 0.
  */
-static inline c3_o _cs_day(c3_s* num, c3_w* len_w, c3_y** byt_yp)
+static inline c3_o _cs_two(c3_s* num, c3_w* len_w, c3_y** byt_yp)
 {
 
   if ( !(*len_w) || !DIGIT(**byt_yp) || **byt_yp == '0' ) {
@@ -2279,8 +2309,8 @@ static inline c3_o _cs_day(c3_s* num, c3_w* len_w, c3_y** byt_yp)
   return c3y;
 }
 
-/* ++duo, parse a maximum 2 digit decimal number,
- * allowing leading 0.
+/* +duo: parse a maximum 2 digit decimal number,
+ * allowing for leading 0.
  */
 static inline c3_o _cs_duo(c3_s* num, c3_w* len_w, c3_y** byt_yp)
 {
@@ -2303,7 +2333,7 @@ static inline c3_o _cs_duo(c3_s* num, c3_w* len_w, c3_y** byt_yp)
   return c3y;
 }
 
-/* ++dot
+/* +dot
  */
 static inline c3_o _cs_dot(c3_w* len_w, c3_y** byt_yp)
 {
@@ -2316,7 +2346,7 @@ static inline c3_o _cs_dot(c3_w* len_w, c3_y** byt_yp)
     return c3n;
   }
 }
-/* ++yelp
+/* +yelp
  */
 static inline c3_o _cs_yelp_mp(mpz_t yer_mp)
 {
@@ -2345,6 +2375,7 @@ static inline c3_o _cs_yelp_mp(mpz_t yer_mp)
 
   return res_o;
 }
+
 /* ++yelq:when:so
  */
 static inline c3_o _cs_yelq_mp(c3_o ad_o, mpz_t yer_mp) {
@@ -2363,26 +2394,23 @@ static inline c3_o _cs_yelq_mp(c3_o ad_o, mpz_t yer_mp) {
     res_o = _cs_yelp_mp(ber_mp);
 
     mpz_clear(ber_mp);
-
     return res_o;
   }
 }
-/* ++ yawn 
- * Days since the beginning 
+/* +yawn: days since the beginning.
  */
 static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal) 
 {
-
   c3_s* cah;
 
   // XX reserve space for years after 2000 AD
   mpz_init(days_mp);
 
   if ( _(_cs_yelp_mp(cal->yer_mp)) ) {
-    cah = moy_yo;
+    cah = _cs_moy_yo;
   }
   else {
-    cah = moh_yo;
+    cah = _cs_moh_yo;
   }
 
   cal->day_s--;
@@ -2398,11 +2426,12 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
     mpz_add_ui(days_mp, days_mp, cah[mot]);
   }
   
-  /* Elapsed days in years
-   */
+  // Elapsed days in years
+  //
   while ( mpz_cmp_ui(cal->yer_mp, 0) > 0) {
 
     // Not divisible by 4
+    //
     if ( ! mpz_divisible_ui_p(cal->yer_mp, 4) ) {
 
       mpz_sub_ui(cal->yer_mp, cal->yer_mp, 1);
@@ -2416,9 +2445,11 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
     }
 
     // Divisible by 4
+    //
     else {
 
       // Not divisible by 100
+      //
       if ( ! mpz_divisible_ui_p(cal->yer_mp, 100) ) {
 
         mpz_sub_ui(cal->yer_mp, cal->yer_mp, 4);
@@ -2432,9 +2463,11 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
       }
 
       // Divisible by 4 & 100
+      //
       else {
 
         // Not divisible by 400
+        //
         if ( ! mpz_divisible_ui_p(cal->yer_mp, 400) ) {
           mpz_sub_ui(cal->yer_mp, cal->yer_mp, 100);
 
@@ -2447,6 +2480,7 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
         }
         // Divisible by 4 & 100 & 400,
         // finish the calculation
+        //
         else {
           mpz_tdiv_q_ui(cal->yer_mp, cal->yer_mp, 400);
           mpz_addmul_ui(days_mp, cal->yer_mp, 1 + (365*100+24)*4);
@@ -2457,7 +2491,9 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
   }
 }
 
-/* u3s_sift_da_bytes: parse @da
+#define HEXDIGIT(a) ( ((a) >= '0' && (a) <= '9') || ((a) >= 'a' && (a) <= 'f') )
+
+/* u3s_sift_da_bytes: parse @da impl.
  */
 u3_weak
 u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
@@ -2502,10 +2538,11 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
   }
 
   if ( !len_w ) {
-    return u3_none;
+    goto sift_da_fail;
   }
 
   // Optional following hep to indicate a BC year
+  //
   if ( *byt_y == '-' ) {
 
     cal.yad_o = c3n;
@@ -2517,16 +2554,17 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
     cal.yad_o = c3y;
   }
 
-  /* ++ vear: check whether the year is in proper range
-     For AD years: from 1 AD to the future
-     For BC years: from 1 BC until JES_YO+1 BC
-     */
+  // +veal: check whether the year is in proper range
+  // For AD years: from 1 AD to the future
+  // For BC years: from 1 BC until JES_YO+1 BC
+  //
   if ( mpz_cmp_ui(cal.yer_mp, 0) == 0 || 
       (!_(cal.yad_o) && mpz_cmp_ui(cal.yer_mp, JES_YO+1) > 0 ) ) {
     goto sift_da_fail;
   }
 
   // We need at least .m.d
+  //
   if ( len_w < 4 ) {
     goto sift_da_fail;
   }
@@ -2536,7 +2574,7 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
   cal.mot_s = 0;
 
   if ( !_(_cs_dot(&len_w, &byt_y)) || 
-       !_(_cs_day(&cal.mot_s, &len_w, &byt_y)) ) {
+       !_(_cs_two(&cal.mot_s, &len_w, &byt_y)) ) {
     goto sift_da_fail;
   }
 
@@ -2549,7 +2587,7 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
   cal.day_s = 0;
 
   if ( !_(_cs_dot(&len_w, &byt_y)) ||
-       !_(_cs_day(&cal.day_s, &len_w, &byt_y)) ){
+       !_(_cs_two(&cal.day_s, &len_w, &byt_y)) ){
     goto sift_da_fail;
   }
 
@@ -2561,10 +2599,10 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
   // Leap year
   //
   if ( _(_cs_yelq_mp(cal.yad_o, cal.yer_mp)) ) {
-    mob = moy_yo[cal.mot_s-1];
+    mob = _cs_moy_yo[cal.mot_s-1];
   }
   else {
-    mob = moh_yo[cal.mot_s-1];
+    mob = _cs_moh_yo[cal.mot_s-1];
   }
 
   if ( cal.day_s > mob ) {
@@ -2623,9 +2661,8 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
       goto sift_da_fail;
     }
 
-    /* Parse ..fractional, at least ..cafe
-     */
-
+    // Parse ..fractional, at least ..cafe
+    //
     if ( len_w >= 6 ) {
   
       if ( *byt_y != '.' ) { 
@@ -2669,11 +2706,12 @@ sift_da_fail:
     return u3_none;
   }
 
-  /* ++ year, date to @da
-   */
+  //
+  // ++ year, date to @da
+  //
 
-  /* year to absolute year
-   */
+  // year to absolute year
+  //
   if ( _(cal.yad_o) ) {
     mpz_add_ui(cal.yer_mp, cal.yer_mp, JES_YO);
   }
@@ -2686,8 +2724,8 @@ sift_da_fail:
 
   _cs_yawn(days_mp, &cal);
 
-  /* day_mp is now expressed in seconds
-   */
+  // day_mp is now expressed in seconds
+  //
   mpz_mul_ui(days_mp, days_mp, DAY_YO);
 
   if ( hor_s ) {
@@ -2706,9 +2744,10 @@ sift_da_fail:
   mpz_add_ui(days_mp, days_mp, fan_d);
 
   mpz_clear(cal.yer_mp);
-
   return u3i_mp(days_mp);
 }
+
+#undef HEXDIGIT
 
 /* u3s_sift_da: parse @da.
 */
@@ -2731,11 +2770,9 @@ u3s_sift_da(u3_atom a)
   return u3s_sift_da_bytes(len_w, byt_y);
 }
 
-#undef HEXDIGIT
-
 #define arelower(a,b,c) (islower(a) && islower(b) && islower(c))
 
-c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
+static inline c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
 
   c3_y a,b,c;
   c3_y* byt_y = *byt_yp;
@@ -2758,7 +2795,7 @@ c3_s _cs_parse_prefix(c3_w* len_w, c3_y** byt_yp) {
   return u3_po_find_prefix(a,b,c);
 }
 
-c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
+static inline c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
 
   c3_y a,b,c;
   c3_y* byt_y = *byt_yp;
@@ -2781,8 +2818,10 @@ c3_s _cs_parse_suffix(c3_w* len_w, c3_y** byt_yp) {
   return u3_po_find_suffix(a,b,c);
 }
 
-/* u3s_sift_p_bytes: parse @p
-*/
+#undef arelower
+
+/* u3s_sift_p_bytes: parse @p impl.
+ */
 u3_weak
 u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
 {
@@ -2801,6 +2840,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   suf_s = _cs_parse_suffix(&len_w, &byt_y);
 
   // A galaxy
+  //
   if ( !len_w && suf_s <= 0xff) {
     return (u3_atom) suf_s;
   }
@@ -2810,6 +2850,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   }
 
   // Rewind to match a star
+  //
   len_w += 3;
   byt_y -= 3;
 
@@ -2828,11 +2869,13 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   pun_d = (puf_s << 8 ) + suf_s;
 
   // A star, disallow ~doz for prefix
+  //
   if ( !len_w && puf_s > 0 ) {
     return (u3_atom) pun_d;
   }
 
   // At least a planet
+  //
   if ( len_w < 7 ) {
     return u3_none;
   }
@@ -2853,7 +2896,9 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     puf_s = _cs_parse_prefix(&len_w, &byt_y);
 
     if ( puf_s > 0xff ) {
+
       // --, end of head
+      //
       if ( *byt_y == '-' ) {
         break;
       }
@@ -2864,6 +2909,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
     if ( suf_s > 0xff ) {
       return u3_none;
     }
@@ -2877,19 +2923,30 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
 
       if ( c3y == u3a_is_cat(pun_d) ) {
+          // XX u3qe_fynd is RETAIN
+          // so we need u3k for correctness, although 
+          // we return a direct atom.
+          // XX This causes memory leak!
           return (u3_atom) u3qe_fynd_ob(pun_d);
       }
       else {
+          // pun needs to be freed
           u3_atom pun = u3i_chub(pun_d);
-          u3_atom sun = u3qe_fynd_ob(pun);
-          u3z(pun);
 
+          // XX u3qe_fynd is RETAIN 
+          // we retain reference to pun, 
+          // and don't own reference to sun. 
+          // Does it need u3k(sun)?;
+          //
+          u3_atom sun = u3qe_fynd_ob(pun);
+
+          u3z(pun);
           return sun;
       }
   }
 
-  /* Parse a big address in quadruples
-   */
+  // Parse a big address in quadruples
+  //
   mpz_t pun_mp;
   mpz_init2(pun_mp, 128);
 
@@ -2899,6 +2956,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   hak = 0;
 
   // Rewind to separating --
+  //
   byt_y -= 1;
   len_w += 1;
 
@@ -2914,7 +2972,9 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     len_w--;
 
     if ( 0 == (hak % 4) ) {
+
       // Separated by --
+      //
       if ( *byt_y != '-' || len_w < 7) {
         goto sift_p_fail;
       }
@@ -2924,11 +2984,13 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     puf_s = _cs_parse_prefix(&len_w, &byt_y);
+
     if ( puf_s > 0xff ) {
       goto sift_p_fail;
     }
 
     suf_s = _cs_parse_suffix(&len_w, &byt_y);
+
     if ( suf_s > 0xff ) {
       goto sift_p_fail;
     }
@@ -2947,7 +3009,9 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     }
   }
 
-  // Uneven number of words
+  // Number of words in the tail 
+  // must be a multiple of four
+  //
   if ( hak ) { 
     goto sift_p_fail;
   }
@@ -2959,10 +3023,12 @@ sift_p_fail:
   return u3_none;
   }
 
+  // XX reference issue?
+  //
   u3_atom pun = u3i_mp(pun_mp);
   u3_atom sun = u3qe_fynd_ob(pun);
-  u3z(pun);
 
+  u3z(pun);
   return sun;
 }
 
@@ -2974,6 +3040,7 @@ u3s_sift_p(u3_atom a)
   c3_w  len_w = u3r_met(3, a);
   c3_y* byt_y;
 
+  //
   // XX assumes little-endian
   //
   if ( c3y == u3a_is_cat(a) ) {
@@ -2992,7 +3059,7 @@ u3s_sift_p(u3_atom a)
                  && DIGIT(a[2])     \
                  && DIGIT(a[3])     )
 
-/* u3s_sift_ud_bytes: parse @ud
+/* u3s_sift_ud_bytes: parse @ud. 
 */
 u3_weak
 u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
@@ -3064,6 +3131,7 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     while ( len_w ) {
+
       if ( !BLOCK(byt_y) ) {
         mpz_clear(a_mp);
         return u3_none;
@@ -3088,7 +3156,6 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 }
 
 #undef BLOCK
-#undef DIGIT
 
 /* u3s_sift_ud: parse @ud.
 */
@@ -3111,50 +3178,77 @@ u3s_sift_ud(u3_atom a)
   return u3s_sift_ud_bytes(len_w, byt_y);
 }
 
-#define DIGIT(d)  ( (d) >= '0' && (d) <= '9' )
+#define PFIXD(a,b) { \
+  if ( len_w < 3) { \
+    return u3_none; \
+  } \
+  if ( !(*byt_y == a && *(byt_y+1) == b) ) { \
+    return u3_none; \
+  } \
+  len_w -= 2; \
+  byt_y += 2; \
+} 
 
-/* u3s_sift_ui_bytes: parse @ui
+/* _cs_dec_bit: compute the number of bits 
+ * needed for a decimal number 99...9 of length l.
+ * 
+ */
+c3_d _cs_bit_dec(c3_d l) {
+
+  if ( l == 0 ) { return 1; }
+
+  c3_d val_d = 0;
+  c3_d pot_d = 1;
+  c3_d k = 0;
+
+  while ( l-- ) { val_d  *= 10; val_d += 9; }
+
+  while ( pot_d < val_d ) {
+    pot_d <<= 1;
+    k++;
+  }
+
+  return k;
+}
+/* u3s_sift_ui_bytes: parse @ui.
  */
 u3_weak
 u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
 {
 
-  c3_d val_d = 0;
+  PFIXD('0', 'i');
 
-  if ( !len_w ) return u3_none;
-
-  //  parse the prefix
-  //
-  if ( len_w < 3 || ! ( byt_y[0] == '0' && byt_y[1] == 'i') ) {
-    return u3_none;
-  }
-
-  byt_y += 2;
-  len_w -= 2;
-
-  if ( len_w == 1 && *byt_y == '0' ) {
-    return (u3_noun)0;
-  }
-
-  // Invalid number string 0i0x
+  // Parse 0i0
   //
   if ( *byt_y == '0' ) {
-    return u3_none;
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
   }
+
+
+  c3_d val_d = 0;
 
   // Avoid gmp allocation if possible
   //  - 19 decimal digits fit in 64 bits
   //
-  if ( len_w < 20 ) {
+  if ( len_w <= 19 ) {
+
+    c3_s dit_s; 
 
     while ( len_w > 0 ) {
 
-      if ( ! DIGIT(*byt_y) ) {
+      dit_s = _cs_dex_val(*byt_y);
+
+      if ( dit_s > 9 ) {
         return u3_none;
       }
 
       val_d *= 10;
-      val_d += (*byt_y - '0');
+      val_d += dit_s;
 
       byt_y++;
       len_w--;
@@ -3164,36 +3258,60 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
   }
   else {
     mpz_t val_mp;  
-    
-    mpz_init2(val_mp, 2*sizeof(val_d)*8);
+    mpz_t bas_mp;
 
-    /*
-     * XX A more efficient way would be to parse the big number word by
-     * word, eg. in chunks of 19 digits 
-     */
-    while ( len_w > 0) {
+    // avoid gmp realloc if possible
+    //
+    {
+      mpz_init2(val_mp, (c3_w)c3_min(_cs_bit_dec(len_w), UINT32_MAX));
+      mpz_init(bas_mp);
+
+      mpz_ui_pow_ui(bas_mp, 10, 18);
+    }
+
+    val_d = 0;
+    c3_s hak_s = 0;
+
+    while ( len_w ) {
 
       if ( ! DIGIT(*byt_y) ) {
+
+        mpz_clear(bas_mp);
+        mpz_clear(val_mp);
         return u3_none;
       }
 
       val_d *= 10;
+      val_d += *byt_y++ - '0';
 
-      mpz_mul_ui(val_mp, val_mp, 10);
-      mpz_add_ui(val_mp, val_mp, (*byt_y - '0'));
-
-      byt_y++;
       len_w--;
+      hak_s++;
+
+      if ( hak_s == 18) {
+        mpz_mul(val_mp, val_mp, bas_mp);
+        mpz_add_ui(val_mp, val_mp, val_d);
+
+        val_d = 0;
+        hak_s = 0;
+      }
+
     }
 
-    u3_atom val_a = u3i_mp(val_mp);
+    if ( hak_s ) {
+        mpz_ui_pow_ui(bas_mp, 10, hak_s);
+        mpz_mul(val_mp, val_mp, bas_mp);
+        mpz_add_ui(val_mp, val_mp, val_d);
+    }
 
-    return val_a;
+    mpz_clear(bas_mp);
+    return u3i_mp(val_mp);
   }
 }
 
 #undef DIGIT
 
+/* u3s_sift_ui: parse @ui.
+ */
 u3_weak 
 u3s_sift_ui(u3_noun a)
 {
@@ -3214,34 +3332,13 @@ u3s_sift_ui(u3_noun a)
   return u3s_sift_ui_bytes(len_w, byt_y);
 }
 
-#define PFIXD(a,b) { \
-  if ( len_w < 2) { \
-    return u3_none; \
-  } \
-  if ( !(*byt_y == a && *(byt_y+1) == b) ) { \
-    return u3_none; \
-  } \
-  len_w -= 2; \
-  byt_y += 2; \
-} 
-
-/* u3s_sift_uv_bytes: parse @uv
+/* u3s_sift_uv_bytes: parse @uv impl.
  */
 u3_weak 
 u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
 {
 
-  if ( ! len_w ) {
-    return u3_none;
-  }
-
-  // Parse the 0v prefix
-  //
   PFIXD('0', 'v');
-
-  if ( ! len_w ) {
-    return u3_none;
-  }
 
   // Parse 0v0
   //
@@ -3254,12 +3351,13 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
     }
   }
 
-  /* Parse a small 64-bit viz number
-   */
+  // Parse a 64-bit viz number
+  //
   c3_d val_d = 0;
   c3_s dit_s = 0;
 
   // Parse the head 
+  //
   for ( size_t i = 0; i < 5; i++ ) {
 
     if ( ! len_w ) {
@@ -3283,7 +3381,9 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
     return u3i_chub(val_d);
   }
+
   // Parse a big viz
+  //
   else {
     mpz_t val_mp; 
     mpz_init2(val_mp, 128);
@@ -3291,9 +3391,9 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
 
     val_d = 0;
 
-    /* Parse a list of dog followed by
-     * a quintuple of viz digits
-     */
+    // Parse a list of dog followed by
+    // a quintuple of viz digits
+    //
     size_t dit = 0;
 
     while ( len_w ) {
@@ -3323,6 +3423,7 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
         dit++;
 
         // Read 12 digits 
+        //
         if ( dit == 12 ) {
           mpz_mul_2exp(val_mp, val_mp, dit*5);
           mpz_add_ui(val_mp, val_mp, val_d);
@@ -3350,6 +3451,8 @@ sift_uv_fail:
 
 }
 
+/* u3s_sift_uv: parse @uv.
+ */
 u3_weak 
 u3s_sift_uv(u3_noun a)
 {
@@ -3370,7 +3473,7 @@ u3s_sift_uv(u3_noun a)
   return u3s_sift_uv_bytes(len_w, byt_y);
 }
 
-/* u3s_sift_uw_bytes: parse @uw
+/* u3s_sift_uw_bytes: parse @uw impl.
  */
 u3_weak 
 u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
@@ -3403,6 +3506,7 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
   c3_s dit_s = 0;
 
   // Parse the head 
+  //
   for ( size_t i = 0; i < 5; i++ ) {
 
     if ( ! len_w ) {
@@ -3426,7 +3530,9 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
     return u3i_chub(val_d);
   }
+
   // Parse the tail
+  //
   else {
     mpz_t val_mp; 
     mpz_init2(val_mp, 128);
@@ -3434,9 +3540,10 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
 
     val_d = 0;
 
-    /* Parse a list of dog followed by
-     * a quintuple of vex digits
-     */
+    // XX this does not parse the dog
+    // Parse a list of: dog followed by
+    // a quintuple of vex digits
+    // 
     size_t dit = 0;
 
     while ( len_w ) {
@@ -3493,6 +3600,8 @@ sift_uw_fail:
 
 }
 
+/* u3s_sift_uw: parse @uw.
+ */
 u3_weak 
 u3s_sift_uw(u3_noun a)
 {
@@ -3512,7 +3621,8 @@ u3s_sift_uw(u3_noun a)
 
   return u3s_sift_uw_bytes(len_w, byt_y);
 }
-/* u3s_sift_ux_bytes: parse @ux
+
+/* u3s_sift_ux_bytes: parse @ux impl.
  */
 u3_weak 
 u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
@@ -3541,12 +3651,13 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
     }
   }
 
-  /* Parse a small 64-bit hex number
-   */
+  // Parse a small 64-bit hex number
+  //
   c3_d val_d = 0;
   c3_s dit_s = 0;
 
   // Parse the head 
+  //
   for ( size_t i = 0; i < 4; i++ ) {
 
     if ( ! len_w ) {
@@ -3567,9 +3678,9 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
     len_w--;
   }
 
-  /* Parse a list of dog followed by
-   * a quadruple of hex digits
-   */
+  // Parse a list of dog followed by
+  // a quadruple of hex digits
+  //
   size_t cuk = 0;
 
   while ( len_w && cuk < 3) {
@@ -3603,7 +3714,9 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
   if ( !len_w ) {
     return u3i_chub(val_d);
   }
+
   // Parse a big hex 
+  //
   else {
     mpz_t val_mp; 
     mpz_init2(val_mp, 128);
@@ -3611,9 +3724,9 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
 
     val_d = 0;
 
-    /* Parse a list of dog followed by
-     * a quadruple of hex digits
-     */
+    // Parse a list of dog followed by
+    // a quadruple of hex digits
+    //
     cuk = 0;
 
     while ( len_w ) {
@@ -3645,6 +3758,7 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
       cuk++;
 
       // Read 4 chunks
+      //
       if ( cuk == 4 ) {
         mpz_mul_2exp(val_mp, val_mp, cuk*16);
         mpz_add_ui(val_mp, val_mp, val_d);
@@ -3670,6 +3784,10 @@ sift_ux_fail:
 
 }
 
+#undef PFIXD
+
+/* u3s_sift_ux: parse @ux.
+ */
 u3_weak 
 u3s_sift_ux(u3_noun a)
 {
@@ -3682,6 +3800,7 @@ u3s_sift_ux(u3_noun a)
   if ( c3y == u3a_is_cat(a) ) {
     byt_y = (c3_y*)&a;
   }
+
   else{
     u3a_atom* vat_u = u3a_to_ptr(a);
     byt_y = (c3_y*)vat_u->buf_w;
