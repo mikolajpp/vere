@@ -139,6 +139,16 @@
         size_t
         u3s_etch_ui_c(u3_atom a, c3_c** out_c);
 
+      /* u3s_etch_ux(): atom to @ux.
+      */
+        u3_atom
+        u3s_etch_ux(u3_atom a);
+
+      /* u3s_etch_ux_c(): atom to @ux, as a malloc'd c string.
+      */
+        size_t
+        u3s_etch_ux_c(u3_atom a, c3_c** out_c);
+
       /* u3s_etch_uv(): atom to @uv.
       */
         u3_atom
@@ -158,16 +168,6 @@
       */
         size_t
         u3s_etch_uw_c(u3_atom a, c3_c** out_c);
-
-      /* u3s_etch_ux(): atom to @ux.
-      */
-        u3_atom
-        u3s_etch_ux(u3_atom a);
-
-      /* u3s_etch_ux_c(): atom to @ux, as a malloc'd c string.
-      */
-        size_t
-        u3s_etch_ux_c(u3_atom a, c3_c** out_c);
 
 
       /* u3s_sift_da_bytes: parse @da.
@@ -210,6 +210,16 @@
         u3_weak
         u3s_sift_ui(u3_atom a);
 
+      /* u3s_sift_ux_bytes: parse @ux.
+      */
+        u3_weak
+        u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y);
+
+      /* u3s_sift_ux: parse @ux.
+      */
+        u3_weak
+        u3s_sift_ux(u3_atom a);
+
       /* u3s_sift_uv_bytes: parse @uv.
       */
         u3_weak
@@ -229,15 +239,5 @@
       */
         u3_weak
         u3s_sift_uw(u3_atom a);
-
-      /* u3s_sift_ux_bytes: parse @ux.
-      */
-        u3_weak
-        u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y);
-
-      /* u3s_sift_ux: parse @ux.
-      */
-        u3_weak
-        u3s_sift_ux(u3_atom a);
 
 #endif /* ifndef U3_SERIAL_H */
