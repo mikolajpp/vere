@@ -1066,7 +1066,7 @@ static u3j_core _140_qua_d[] =
   { "mule", 7, _140_qua_mule_a, 0, _140_qua_mule_ha },
 
   { "scot", 7, _140_qua_scot_a, 0, _140_qua_scot_ha },
-  /*{ "scow", 7, _140_qua_scow_a, 0, _140_qua_scow_ha },*/
+  { "scow", 7, _140_qua_scow_a, 0, _140_qua_scow_ha },
   { "slaw", 7, _140_qua_slaw_a, 0, _140_qua_slaw_ha },
   {}
 };

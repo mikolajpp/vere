@@ -1357,7 +1357,7 @@ u3qc_po_ins(u3_noun a)
 
   puf_s = u3_po_find_prefix(byt_y[0], byt_y[1], byt_y[2]);
 
-  if ( puf_s < 0xff ) {
+  if ( puf_s <= 0xff ) {
       return u3nc(u3_nul, u3i_word(puf_s));
   }
 
@@ -1387,7 +1387,7 @@ u3qc_po_ind(u3_noun a)
 
   suf_s = u3_po_find_suffix(byt_y[0], byt_y[1], byt_y[2]);
 
-  if ( suf_s < 0xff ) {
+  if ( suf_s <= 0xff ) {
       return u3nc(u3_nul, suf_s);
   }
 
