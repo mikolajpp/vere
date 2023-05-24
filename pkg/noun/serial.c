@@ -1191,7 +1191,7 @@ static size_t _cs_etch_da_size(struct _tarp* rip, struct _cald* ger)
     len_i += mpz_sizeinbase(ger->yer_mp, 10);
   }
   else {
-    len_i += ceil(log10(ger->yer_d))+1;
+    len_i += ceil(log10(ger->yer_d)) + 1;
   }
 
   if ( !_(ger->yad_o) ) {
@@ -1245,17 +1245,18 @@ static struct _tarp _cs_yell(u3_atom a) {
     rip.sec_w = mpz_get_ui(sec_mp);
 
     if ( mpz_fits_ulong_p(rip.day_mp) ) {
+      // XX make sure this C is solid
       rip.day_d = mpz_get_ui(rip.day_mp);
 
-      mpz_clear(sec_mp);
       mpz_clear(rip.day_mp);
 
       rip.dag_o = c3n;
     }
     else { 
-      mpz_clear(sec_mp);
       rip.dag_o = c3y;
     }
+
+    mpz_clear(sec_mp);
   }
 
   rip.hor_w = rip.sec_w / HOR_YO;
@@ -1587,6 +1588,8 @@ size_t  _cs_etch_da_bytes(struct _tarp* rip, struct _cald* ger, size_t len_i, c3
     mpz_init(r_mp);
     c3_d dit_d;
 
+    // XX speed up by reading whole words ?
+    //
     while ( mpz_size(ger->yer_mp) > 0 ) {
 
       dit_d = mpz_tdiv_qr_ui(ger->yer_mp, r_mp, ger->yer_mp, 10);
@@ -1861,44 +1864,22 @@ static size_t
 _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 {
     c3_y* buf_y = hun_y + (len_i - 1);
-    mpz_t   b_mp;
     c3_w    b_w;
     size_t  dif_i;
-
-    mpz_init2(b_mp, 10);
 
     if ( !mpz_size(a_mp) ) {
         *buf_y-- = '0';
     }
     else {
-        while ( 1 ) { 
-            // XX @ui does not have separators.
-            // What would be the most efficient way to extract digits?
-            b_w = mpz_tdiv_qr_ui(a_mp, b_mp, a_mp, 1000);
+        while ( mpz_size(a_mp) ) { 
 
-            // XX Verify that the returned remainder is equal to b_mp
-            // Is it a sanity check? The remainder must be less than 1000, 
-            // perhaps this check is not really necessary. 
-            c3_assert( mpz_get_ui(b_mp) == b_w); // XX
+            // 9 digits fit into a word 
+            b_w = mpz_tdiv_q_ui(a_mp, a_mp, 1000000000);
 
-            /* If there are no more digits waiting 
-             * to be extracted.*/
-            if ( !mpz_size(a_mp) ) {
-                /*
-                 * Extract 1-3 digits
-                 */
-                while ( b_w ) {
-                    *buf_y-- = '0' + (b_w % 10);
-                    b_w /= 10;
-                }
-                break;
+            while ( b_w ) {
+                *buf_y-- = '0' + (b_w % 10);
+                b_w /= 10;
             }
-
-            *buf_y-- = '0' + (b_w % 10);
-            b_w /= 10;
-            *buf_y-- = '0' + (b_w % 10);
-            b_w /= 10;
-            *buf_y-- = '0' + (b_w % 10);
         }
     }
 
@@ -1910,11 +1891,7 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
     c3_assert( buf_y >= hun_y); // XX
     
     // XX mpz_sizeinbase may overestimate by 1
-    // therefore we might have to move 
-    // the buffer to align it with the beginning of hun_y
     {
-        // XX Difference between allocated size and size
-        // of the string put so far 
         size_t dif_i = buf_y - hun_y;
         
         if ( dif_i ) {
@@ -1924,7 +1901,6 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
         }
     }
 
-    mpz_clear(b_mp);
     return len_i;
 }
 
@@ -3355,13 +3331,13 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
     return u3i_chub(val_d);
   }
   else {
-    mpz_t val_mp;  
+    mpz_t a_mp;  
     mpz_t bas_mp;
 
     // avoid gmp realloc if possible
     //
     {
-      mpz_init2(val_mp, (c3_w)c3_min(_cs_bit_dec(len_w), UINT32_MAX));
+      mpz_init2(a_mp, (c3_w)c3_min(_cs_bit_dec(len_w), UINT32_MAX));
       mpz_init(bas_mp);
 
       mpz_ui_pow_ui(bas_mp, 10, 19);
@@ -3375,7 +3351,7 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
       if ( ! DIGIT(*byt_y) ) {
 
         mpz_clear(bas_mp);
-        mpz_clear(val_mp);
+        mpz_clear(a_mp);
         return u3_none;
       }
 
@@ -3386,8 +3362,8 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
       hak_s++;
 
       if ( hak_s == 19) {
-        mpz_mul(val_mp, val_mp, bas_mp);
-        mpz_add_ui(val_mp, val_mp, val_d);
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
 
         val_d = 0;
         hak_s = 0;
@@ -3397,12 +3373,12 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
 
     if ( hak_s ) {
         mpz_ui_pow_ui(bas_mp, 10, hak_s);
-        mpz_mul(val_mp, val_mp, bas_mp);
-        mpz_add_ui(val_mp, val_mp, val_d);
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
     }
 
     mpz_clear(bas_mp);
-    return u3i_mp(val_mp);
+    return u3i_mp(a_mp);
   }
 }
 
@@ -3526,9 +3502,9 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
   // Parse a big hex 
   //
   else {
-    mpz_t val_mp; 
-    mpz_init2(val_mp, 128);
-    mpz_set_ui(val_mp, val_d);
+    mpz_t a_mp; 
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
 
     val_d = 0;
 
@@ -3568,8 +3544,8 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
       // Read 4 chunks
       //
       if ( cuk == 4 ) {
-        mpz_mul_2exp(val_mp, val_mp, cuk*16);
-        mpz_add_ui(val_mp, val_mp, val_d);
+        mpz_mul_2exp(a_mp, a_mp, cuk*16);
+        mpz_add_ui(a_mp, a_mp, val_d);
 
         val_d = 0;
         cuk = 0;
@@ -3577,17 +3553,17 @@ u3s_sift_ux_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     if ( cuk ) {
-      mpz_mul_2exp(val_mp, val_mp, cuk*16);
-      mpz_add_ui(val_mp, val_mp, val_d);
+      mpz_mul_2exp(a_mp, a_mp, cuk*16);
+      mpz_add_ui(a_mp, a_mp, val_d);
     }
 
     if ( len_w ) { 
 sift_ux_fail:
-      mpz_clear(val_mp);
+      mpz_clear(a_mp);
       return u3_none;
     }
 
-    return u3i_mp(val_mp);
+    return u3i_mp(a_mp);
   }
 
 }
@@ -3667,9 +3643,9 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
   // Parse a big viz
   //
   else {
-    mpz_t val_mp; 
-    mpz_init2(val_mp, 128);
-    mpz_set_ui(val_mp, val_d);
+    mpz_t a_mp; 
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
 
     val_d = 0;
 
@@ -3707,8 +3683,8 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
         // Read 12 digits 
         //
         if ( dit == 12 ) {
-          mpz_mul_2exp(val_mp, val_mp, dit*5);
-          mpz_add_ui(val_mp, val_mp, val_d);
+          mpz_mul_2exp(a_mp, a_mp, dit*5);
+          mpz_add_ui(a_mp, a_mp, val_d);
 
           val_d = 0;
           dit = 0;
@@ -3718,17 +3694,17 @@ u3s_sift_uv_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     if ( dit ) {
-      mpz_mul_2exp(val_mp, val_mp, dit*5);
-      mpz_add_ui(val_mp, val_mp, val_d);
+      mpz_mul_2exp(a_mp, a_mp, dit*5);
+      mpz_add_ui(a_mp, a_mp, val_d);
     }
 
     if ( len_w ) {
 sift_uv_fail:
-      mpz_clear(val_mp);
+      mpz_clear(a_mp);
       return u3_none;
     }
 
-    return u3i_mp(val_mp);
+    return u3i_mp(a_mp);
   }
 
 }
@@ -3816,9 +3792,9 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
   // Parse the tail
   //
   else {
-    mpz_t val_mp; 
-    mpz_init2(val_mp, 128);
-    mpz_set_ui(val_mp, val_d);
+    mpz_t a_mp; 
+    mpz_init2(a_mp, 128);
+    mpz_set_ui(a_mp, val_d);
 
     val_d = 0;
 
@@ -3852,8 +3828,8 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
         dit++;
 
         if ( dit == 10) {
-          mpz_mul_2exp(val_mp, val_mp, dit*6);
-          mpz_add_ui(val_mp, val_mp, val_d);
+          mpz_mul_2exp(a_mp, a_mp, dit*6);
+          mpz_add_ui(a_mp, a_mp, val_d);
 
           val_d = 0;
           dit = 0;
@@ -3863,17 +3839,17 @@ u3s_sift_uw_bytes(c3_w len_w, c3_y* byt_y)
     }
 
     if ( dit ) {
-      mpz_mul_2exp(val_mp, val_mp, dit*6);
-      mpz_add_ui(val_mp, val_mp, val_d);
+      mpz_mul_2exp(a_mp, a_mp, dit*6);
+      mpz_add_ui(a_mp, a_mp, val_d);
     }
 
     if ( len_w ) {
 sift_uw_fail:
-      mpz_clear(val_mp);
+      mpz_clear(a_mp);
       return u3_none;
     }
 
-    return u3i_mp(val_mp);
+    return u3i_mp(a_mp);
   }
 
 }
