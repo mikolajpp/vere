@@ -12,6 +12,8 @@ _setup(void)
   u3m_pave(c3y);
 }
 
+#define _neq_etch_out(sa, sb, len) ((strlen((sa)) != strlen((sb))) || (0 != strncmp((sa), (sb), (len))))
+
 static inline c3_i
 _da_etch(mpz_t a_mp, const c3_c* dat_c)
 {
@@ -22,7 +24,7 @@ _da_etch(mpz_t a_mp, const c3_c* dat_c)
 
   len_i = u3s_etch_da_c(dat, &out_c);
 
-  if ( 0 != strcmp(dat_c, out_c) ) {
+  if ( _neq_etch_out(dat_c, out_c, len_i) ) {
     fprintf(stderr, "etch_da: 0x");
     mpz_out_str(stderr, 16, a_mp);
     fprintf(stderr, " fail; expected %s, got '%s'\r\n",
@@ -169,7 +171,7 @@ _p_etch(c3_d pun_d, const c3_c* pun_c)
   size_t len_i = u3s_etch_p_c(pun, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(pun_c, out_c) ) {
+  if ( _neq_etch_out(out_c, pun_c, len_i) ) {
     fprintf(stderr, "etch_p: %" PRIu64 " fail; expected %s, got '%s'\r\n",
                     pun_d, pun_c, out_c);
     ret_i = 0;
@@ -209,7 +211,7 @@ _big_p_etch(c3_c* big_str, c3_c* pun_c)
   c3_c*  out_c;
   size_t len_i = u3s_etch_p_c(big, &out_c);
 
-  if ( 0 != strncmp(pun_c, out_c, len_i) ) {
+  if ( _neq_etch_out(pun_c, out_c, len_i) ) {
     fprintf(stderr, "etch_p_big: %s fail; expected %s, got '%s'\r\n", 
         big_str, pun_c, out_c);
     ret_i = 0;
@@ -307,7 +309,7 @@ _ud_etch(c3_d num_d, const c3_c* num_c)
   size_t len_i = u3s_etch_ud_c(num, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(num_c, out_c) ) {
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
     fprintf(stderr, "etch_ud: %" PRIu64 " fail; expected %s, got '%s'\r\n",
                     num_d, num_c, out_c);
     ret_i = 0;
@@ -362,7 +364,7 @@ _test_etch_ud(void)
     c3_c*  out_c;
     size_t len_i = u3s_etch_ud_c(num, &out_c);
 
-    if ( 0 != strncmp(num_c, out_c, len_i) ) {
+    if ( _neq_etch_out(num_c, out_c, len_i) ) {
       fprintf(stderr, "etch_ud: (bex 128) fail; expected %s, got '%s'\r\n",
                       num_c, out_c);
       ret_i = 0;
@@ -396,7 +398,7 @@ _ui_etch(c3_d num_d, const c3_c* num_c)
   size_t len_i = u3s_etch_ui_c(num, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(num_c, out_c) ) {
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
     fprintf(stderr, "etch_ui: %" PRIu64 " fail; expected %s, got '%s'\r\n",
                     num_d, num_c, out_c);
     ret_i = 0;
@@ -430,7 +432,7 @@ _ux_etch(c3_d num_d, const c3_c* num_c)
   size_t len_i = u3s_etch_ux_c(num, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(num_c, out_c) ) {
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
     fprintf(stderr, "etch_ux: 0x%" PRIx64 " fail; expected %s, got '%s'\r\n",
                     num_d, num_c, out_c);
     ret_i = 0;
@@ -485,7 +487,7 @@ _test_etch_ui(void)
     c3_c*  out_c;
     size_t len_i = u3s_etch_ui_c(num, &out_c);
 
-    if ( 0 != strncmp(num_c, out_c, len_i) ) {
+    if ( _neq_etch_out(num_c, out_c, len_i) ) {
       fprintf(stderr, "etch_ui: (bex 128) fail; expected %s, got '%s'\r\n",
                       num_c, out_c);
       ret_i = 0;
@@ -548,7 +550,7 @@ _uv_etch(c3_d num_d, const c3_c* num_c)
   size_t len_i = u3s_etch_uv_c(num, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(num_c, out_c) ) {
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
     fprintf(stderr, "etch_uv: 0x%" PRIx64 " fail; expected %s, got '%s'\r\n",
                     num_d, num_c, out_c);
     ret_i = 0;
@@ -613,7 +615,7 @@ _test_etch_uv(void)
     c3_c*  out_c;
     size_t len_i = u3s_etch_uv_c(hou, &out_c);
 
-    if ( 0 != strncmp(num_c, out_c, len_i) ) {
+    if ( _neq_etch_out(num_c, out_c, len_i) ) {
       fprintf(stderr, "etch_uv: big viz fail; expected %s, got '%s'\r\n",
                       num_c, out_c);
       ret_i = 0;
@@ -649,7 +651,7 @@ _uw_etch(c3_d num_d, const c3_c* num_c)
   size_t len_i = u3s_etch_uw_c(num, &out_c);
   c3_i   ret_i = 1;
 
-  if ( 0 != strcmp(num_c, out_c) ) {
+  if ( _neq_etch_out(num_c, out_c, len_i) ) {
     fprintf(stderr, "etch_uw: 0x%" PRIx64 " fail; expected %s, got '%s'\r\n",
                     num_d, num_c, out_c);
     ret_i = 0;
@@ -715,7 +717,7 @@ _test_etch_uw(void)
     c3_c*  out_c;
     size_t len_i = u3s_etch_uw_c(hou, &out_c);
 
-    if ( 0 != strncmp(num_c, out_c, len_i) ) {
+    if ( _neq_etch_out(num_c, out_c, len_i) ) {
       fprintf(stderr, "etch_uw: big wiz fail; expected %s, got '%s'\r\n",
                       num_c, out_c);
       ret_i = 0;
@@ -1532,7 +1534,7 @@ _test_sift_uw(void)
     c3_c* num_c = "0w9.37a8e.elucg.lcgpl.~--38.alllz.-----.~~~~~";
     c3_c* hex_c = "0x24.31ca.20e3.9578.c415.3106.55ff.ef83.20a5.5556.3fbe.fbef.bfff.ffff";
 
-    u3_weak hot = u3s_sift_ux_bytes(strlen(num_hex_c), (c3_y*)hex_c);
+    u3_weak hot = u3s_sift_ux_bytes(strlen(hex_c), (c3_y*)hex_c);
     u3_atom out = u3s_sift_uw_bytes(strlen(num_c), (c3_y*)num_c);
 
     if ( u3_none == out) {
