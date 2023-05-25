@@ -161,6 +161,145 @@ _test_etch_da(void)
 
   return ret_i;
 }
+
+static inline c3_i
+_p_etch(c3_d pun_d, const c3_c* pun_c)
+{
+  u3_atom pun = u3i_chub(pun_d);
+  c3_c*  out_c;
+  size_t len_i = u3s_etch_p_c(pun, &out_c);
+  c3_i   ret_i = 1;
+
+  if ( _neq_etch_out(out_c, pun_c, len_i) ) {
+    fprintf(stderr, "etch_p: %" PRIu64 " fail; expected %s, got '%s'\r\n",
+                    pun_d, pun_c, out_c);
+    ret_i = 0;
+  }
+  else {
+    u3_noun out = u3s_etch_p(pun);
+    u3_noun tou = u3i_bytes(len_i, (c3_y*)out_c);
+
+    if ( c3n == u3r_sing(tou, out) ) {
+      fprintf(stderr, "etch_p: %" PRIu64 " mismatch; expected %s\r\n", pun_d, pun_c);
+      u3m_p("out", out);
+      ret_i = 0;
+    }
+
+    u3z(out);
+    u3z(tou);
+  }
+
+  c3_free(out_c);
+  u3z(pun);
+
+  return ret_i;
+}
+static c3_i
+_big_p_etch(c3_c* big_str, c3_c* pun_c)
+{
+  size_t ret_i = 1;
+
+  u3_atom big;
+  mpz_t big_mp;
+
+  mpz_init(big_mp);
+  mpz_set_str(big_mp, big_str, 16);
+
+  big = u3i_mp(big_mp);
+
+  c3_c*  out_c;
+  size_t len_i = u3s_etch_p_c(big, &out_c);
+
+  if ( _neq_etch_out(pun_c, out_c, len_i) ) {
+    fprintf(stderr, "etch_p_big: %s fail; expected %s, got '%s'\r\n",
+        big_str, pun_c, out_c);
+    ret_i = 0;
+  }
+  else {
+    u3_noun out = u3s_etch_p(big);
+    u3_noun tou = u3i_bytes(len_i, (c3_y*)out_c);
+
+    if ( c3n == u3r_sing(tou, out) ) {
+      fprintf(stderr, "etch_ud: %s mismatch; expected %s\r\n", big_str, pun_c);
+      u3m_p("out", out);
+      ret_i = 0;
+    }
+
+    u3z(out);
+    u3z(tou);
+  }
+
+  c3_free(out_c);
+  u3z(big);
+
+  return ret_i;
+}
+
+static c3_i
+_test_etch_p(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _p_etch(0x0, "~zod");
+
+  ret_i &= _p_etch(0x3, "~wes");
+  ret_i &= _p_etch(0x17, "~dep");
+  ret_i &= _p_etch(0x29, "~led");
+  ret_i &= _p_etch(0xbf, "~myl");
+  ret_i &= _p_etch(0xcf, "~wel");
+
+  ret_i &= _p_etch(0xff, "~fes");
+
+  ret_i &= _p_etch(0x1cc, "~marryd");
+  ret_i &= _p_etch(0x2513, "~dalnup");
+  ret_i &= _p_etch(0x753b, "~dacwyc");
+  ret_i &= _p_etch(0xb365, "~dibwet");
+  ret_i &= _p_etch(0xdcaa, "~rislep");
+
+  ret_i &= _p_etch(0xffff, "~fipfes");
+
+  ret_i &= _p_etch(0x6d2030, "~hocmeb-dapsen");
+  ret_i &= _p_etch(0x108deca3, "~divbud-ladbyn");
+  ret_i &= _p_etch(0x64f4eace, "~mopten-hilfex");
+  ret_i &= _p_etch(0xa1ae3130, "~tinbyn-fammun");
+  ret_i &= _p_etch(0xb91f853a, "~dinnex-sonnum");
+
+  ret_i &= _p_etch(0xffffffff, "~dostec-risfen");
+
+  ret_i &= _p_etch(0x6bfc3f1881b, "~sigmyl-bintus-sovpet");
+  ret_i &= _p_etch(0x46f6e0458bc7, "~novweg-bilnet-radfep");
+  ret_i &= _p_etch(0xab36928a695b, "~boswyd-lagdut-tobhes");
+  ret_i &= _p_etch(0xe1a670e9eebd, "~larpub-bacfus-nisbex");
+  ret_i &= _p_etch(0xf6b014781344, "~tonbyl-dasryg-bitlen");
+
+  ret_i &= _p_etch(0xffffffffffff, "~fipfes-dostec-risfen");
+
+  ret_i &= _p_etch(0x94fede64d31f2a0, "~lisnet-rivnys-natdem-donful");
+  ret_i &= _p_etch(0xb39638ae3f909214, "~dibryg-bichut-witsev-fanpub");
+  ret_i &= _p_etch(0xd226683f5a2fa433, "~nilsul-picpur-nocsem-tasrys");
+  ret_i &= _p_etch(0xd5bc5e03458e7790, "~fopbyt-worwes-rolput-nodruc");
+  ret_i &= _p_etch(0xe203169849fc1124, "~fitwes-hopfep-bitwyd-doswer");
+
+  ret_i &= _p_etch(0xffffffffffffffff, "~fipfes-fipfes-dostec-risfen");
+
+  ret_i &= _big_p_etch("b46c9c7817150a23781c15d2c20c2f3",
+      "~dirrul-radner-dister-ritnus--taddus-digmus-torlun-filnyt");
+  ret_i &= _big_p_etch("9fd9c878ceb2bdd0db35376f6b8b495f",
+      "~patdun-hinfel-fadpem-tocnyd--nactyl-tadpel-balrev-tipsym");
+  ret_i &= _big_p_etch("c9ee5fffc61ce2d923149c405dd2ab6c",
+      "~radbec-sipfes-harryt-fitdun--rovheb-haprys-morrel-bostux");
+  ret_i &= _big_p_etch("5172f9231ededdfaa56cddc363bd703d",
+      "~podmeb-sovsep-silryl-fotrep--pintux-fotfex-wictyp-sivder");
+  ret_i &= _big_p_etch("54c36542cc9f897c1b8587e4dc95fff1",
+      "~tolfex-watden-ragmer-navren--folseg-lonryc-rispyx-fiptes");
+
+  ret_i &= _big_p_etch("4524acf6cfe1ed7c974843bb918e0cae4c01", "~locpes--batweg-toplys-rivren-ripreg--moldyt-hadted-wachut-witnec");
+
+  ret_i &= _big_p_etch("5711709a8c188c2ca4439727e342dc3f20e8b66769e1", "~napsyx-sivtus-nibdys--nibwen-sonnut-ripped-walden--rispur-hollyn-bitmyn-davlys");
+
+  return ret_i;
+}
+
 static inline c3_i
 _ud_etch(c3_d num_d, const c3_c* num_c)
 {
@@ -764,6 +903,137 @@ _test_sift_ud(void)
   return ret_i;
 }
 
+static inline c3_i
+_ux_good(c3_d num_d, const c3_c* num_c)
+{
+  u3_weak out;
+
+  out = u3s_sift_ux_bytes(strlen(num_c), (c3_y*)num_c);
+
+  if ( c3y == u3a_is_cat(out) ) {
+    if ( num_d != out ) {
+        fprintf(stderr, "sift_ux: %s wrong; expected 0x%llx: actual 0x%x\r\n", num_c, num_d, out);
+      return 0;
+    }
+
+    return 1;
+  }
+  else {
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ux: %s fail; expected 0x%llx\r\n", num_c, num_d);
+      return 0;
+    }
+
+    c3_d out_d = u3r_chub(0, out);
+
+    if ( num_d != out_d ) {
+        fprintf(stderr, "sift_ux: %s wrong; expected 0x%llx: actual 0x%llx\r\n", num_c, num_d, out_d);
+
+        u3z(out);
+        return 0;
+    }
+
+    u3z(out);
+    return 1;
+  }
+
+}
+
+static inline c3_i
+_ux_fail(const c3_c* num_c)
+{
+  u3_weak out;
+  if ( u3_none != (out = u3s_sift_ux_bytes(strlen(num_c), (c3_y*)num_c)) ) {
+    u3m_p("out", out);
+    fprintf(stderr, "sift_ux: %s expected fail\r\n", num_c);
+    return 0;
+  }
+
+  return 1;
+}
+
+static c3_i
+_test_sift_ux(void)
+{
+  c3_i ret_i = 1;
+
+  ret_i &= _ux_good(0x0, "0x0");
+  ret_i &= _ux_good(0x1, "0x1");
+  ret_i &= _ux_good(0x12, "0x12");
+  ret_i &= _ux_good(0x1a3, "0x1a3");
+  ret_i &= _ux_good(0x123b, "0x123b");
+  ret_i &= _ux_good(0x1234c, "0x1.234c");
+  ret_i &= _ux_good(0x12e3e56, "0x12e.3e56");
+  ret_i &= _ux_good(0x1234e67, "0x123.4e67");
+  ret_i &= _ux_good(0x1234567f, "0x1234.567f");
+  ret_i &= _ux_good(0x123456789, "0x1.2345.6789");
+  ret_i &= _ux_good(0x100000000, "0x1.0000.0000");
+  ret_i &= _ux_good(0x101101101, "0x1.0110.1101");
+  ret_i &= _ux_good(0x201201201, "0x2.0120.1201");
+  ret_i &= _ux_good(0x302201100, "0x3.0220.1100");
+
+  ret_i &= _ux_fail("0x");
+  ret_i &= _ux_fail("x0");
+  ret_i &= _ux_fail("0x01");
+  ret_i &= _ux_fail("0x12.345");
+  ret_i &= _ux_fail("0x12.3456.789");
+  ret_i &= _ux_fail("0x1.2.3456.789");
+
+  {
+    c3_c* num_c = "0x1.0000.0000";
+    u3_weak out = u3s_sift_ux_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom pro = u3qc_bex(32);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ux: (bex 32) fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(pro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_ux: (bex 32) wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(pro);
+  }
+
+  {
+    c3_c* num_c = "0x1.1234.5678.9abc.def0.1234.5678.9abc.def0";
+    c3_c* bnum_c = "0x1234.5678.9abc.def0";
+
+    u3_weak out = u3s_sift_ux_bytes(strlen(num_c), (c3_y*)num_c);
+    u3_atom bout = u3s_sift_ux_bytes(strlen(bnum_c), (c3_y*)bnum_c);
+
+    u3_atom pro = u3qc_bex(128);
+    u3_atom bpro = u3qa_add(pro, bout);
+    u3_atom cpro = u3qc_lsh(6,1, bout);
+    u3_atom dpro = u3qa_add(bpro, cpro);
+
+    if ( u3_none == out ) {
+      fprintf(stderr, "sift_ux: big hex fail\r\n");
+      ret_i = 0;
+    }
+
+    else {
+      if ( c3n == u3r_sing(dpro, out) ) {
+        u3m_p("out", out);
+        fprintf(stderr, "sift_ux: big hex wrong\r\n");
+        ret_i = 0;
+      }
+    }
+
+    u3z(out); u3z(bout);
+    u3z(pro); u3z(bpro);
+    u3z(cpro); u3z(dpro);
+  }
+
+  return ret_i;
+}
+
 static c3_i
 _test_en_base16(void)
 {
@@ -1157,6 +1427,11 @@ _test_jets(void)
 
   if ( !_test_etch_da() ) {
     fprintf(stderr, "test jets: etch_da: failed\r\n");
+    ret_i = 0;
+  }
+
+  if ( !_test_etch_p() ) {
+    fprintf(stderr, "test jets: etch_p: failed\r\n");
     ret_i = 0;
   }
 
