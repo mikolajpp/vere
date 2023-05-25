@@ -2597,6 +2597,18 @@ static inline c3_o _cs_duo(c3_s* num, c3_w* len_w, c3_y** byt_yp)
   return c3y;
 }
 
+/* _cs_dex_val: char to decimal digit.
+ */
+static inline c3_s _cs_dex_val(c3_y dex) {
+
+  if ( dex > '9' ) {
+    return -1;
+  }
+  else {
+    return dex  - '0';
+  }
+}
+
 /* _cs_hex_val: char to hexadecimal digit.
  */
 static inline c3_s _cs_hex_val(c3_y hex) {
@@ -3140,7 +3152,6 @@ u3s_sift_ud_bytes(c3_w len_w, c3_y* byt_y)
 }
 
 #undef BLOCK
-#undef DIGIT
 
 /* u3s_sift_ud: parse @ud.
 */
@@ -3173,6 +3184,152 @@ u3s_sift_ud(u3_atom a)
   len_w -= 2; \
   byt_y += 2; \
 }
+
+/* _cs_dec_bit: compute the number of bits
+ * needed for a decimal number 99...9 of length l.
+ *
+ */
+c3_d _cs_bit_dec(c3_d l) {
+
+  if ( l == 0 ) { return 1; }
+
+  c3_d val_d = 0;
+  c3_d pot_d = 1;
+  c3_d k = 0;
+
+  while ( l-- ) { val_d  *= 10; val_d += 9; }
+
+  while ( pot_d < val_d ) {
+    pot_d <<= 1;
+    k++;
+  }
+
+  return k;
+}
+
+
+/* u3s_sift_ui_bytes: parse @ui.
+ */
+u3_weak
+u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
+{
+
+  PFIXD('0', 'i');
+
+  // Parse 0i0
+  //
+  if ( *byt_y == '0' ) {
+    if ( len_w > 1 ) {
+      return u3_none;
+    }
+    else {
+      return (u3_noun)0;
+    }
+  }
+
+  c3_d val_d = 0;
+
+  // Avoid gmp allocation if possible
+  //  - 19 decimal digits fit in 64 bits
+  //
+  if ( len_w <= 19 ) {
+
+    c3_s dit_s;
+
+    while ( len_w > 0 ) {
+
+      dit_s = _cs_dex_val(*byt_y);
+
+      if ( dit_s > 9 ) {
+        return u3_none;
+      }
+
+      val_d *= 10;
+      val_d += dit_s;
+
+      byt_y++;
+      len_w--;
+    }
+
+    return u3i_chub(val_d);
+  }
+
+  else {
+    mpz_t a_mp;
+    mpz_t bas_mp;
+
+    // avoid gmp realloc if possible
+    //
+    {
+      mpz_init2(a_mp, (c3_w)c3_min(_cs_bit_dec(len_w), UINT32_MAX));
+      mpz_init(bas_mp);
+
+      mpz_ui_pow_ui(bas_mp, 10, 19);
+    }
+
+    val_d = 0;
+    c3_s hak_s = 0;
+
+    while ( len_w ) {
+
+      if ( ! DIGIT(*byt_y) ) {
+
+        mpz_clear(bas_mp);
+        mpz_clear(a_mp);
+        return u3_none;
+      }
+
+      val_d *= 10;
+      val_d += *byt_y++ - '0';
+
+      len_w--;
+      hak_s++;
+
+      if ( hak_s == 19) {
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
+
+        val_d = 0;
+        hak_s = 0;
+      }
+
+    }
+
+    if ( hak_s ) {
+        mpz_ui_pow_ui(bas_mp, 10, hak_s);
+        mpz_mul(a_mp, a_mp, bas_mp);
+        mpz_add_ui(a_mp, a_mp, val_d);
+    }
+
+    mpz_clear(bas_mp);
+    return u3i_mp(a_mp);
+  }
+}
+
+#undef DIGIT
+
+/* u3s_sift_ui: parse @ui.
+ */
+u3_weak
+u3s_sift_ui(u3_noun a)
+{
+
+  c3_w  len_w = u3r_met(3, a);
+  c3_y* byt_y;
+
+  // XX assumes little-endian
+  //
+  if ( c3y == u3a_is_cat(a) ) {
+    byt_y = (c3_y*)&a;
+  }
+  else{
+    u3a_atom* vat_u = u3a_to_ptr(a);
+    byt_y = (c3_y*)vat_u->buf_w;
+  }
+
+  return u3s_sift_ui_bytes(len_w, byt_y);
+}
+
 
 /* u3s_sift_ux_bytes: parse @ux impl.
  */
