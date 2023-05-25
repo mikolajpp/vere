@@ -1025,7 +1025,7 @@ u3s_etch_p_c(u3_atom a, c3_c** out_c)
 
     return len_i;
   }
-  
+
   mpz_t     sxz_mp;
   u3r_mp(sxz_mp, sxz);
 
@@ -1073,7 +1073,7 @@ u3s_etch_p(u3_atom a)
     }
     return u3i_bytes(SMOL_P - dif_w, buf_y);
   }
-  
+
   u3i_slab sab_u;
   size_t   len_i;
   mpz_t     sxz_mp;
@@ -1850,6 +1850,151 @@ u3s_etch_ud_c(u3_atom a, c3_c** out_c)
   return len_i;
 }
 
+/* _cs_etch_ui_size(): output length in @ui for given mpz_t
+ */
+static inline size_t
+_cs_etch_ui_size(mpz_t a_mp)
+{
+    size_t len_i = mpz_sizeinbase(a_mp, 10);
+    return len_i + 2; // + 0i
+}
+
+/* _cs_etch_ui_bytes(): atom to @ui impl.
+ */
+static size_t
+_cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
+{
+    c3_y* buf_y = hun_y + (len_i - 1);
+    c3_w    b_w;
+    size_t  dif_i;
+
+    if ( !mpz_size(a_mp) ) {
+        *buf_y-- = '0';
+    }
+    else {
+        while ( mpz_size(a_mp) ) {
+
+            // 9 digits fit into a word
+            b_w = mpz_tdiv_q_ui(a_mp, a_mp, 1000000000);
+
+            while ( b_w ) {
+                *buf_y-- = '0' + (b_w % 10);
+                b_w /= 10;
+            }
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y-- = '0';
+
+    buf_y++;
+
+    // XX mpz_sizeinbase may overestimate by 1
+    {
+        size_t dif_i = buf_y - hun_y;
+
+        if ( dif_i ) {
+            len_i -= dif_i;
+            memmove(hun_y, buf_y, dif_i);
+            memset(hun_y + len_i, 0, dif_i);
+        }
+    }
+
+    return len_i;
+}
+
+/* u3s_etch_ui_smol(): c3_d to @ui
+ **
+ **  =(22 (met 3 (scot %ud (dec (bex 64)))))
+ */
+c3_y*
+u3s_etch_ui_smol(c3_d a_d, c3_y hun_y[SMOL_UI])
+{
+    c3_y* buf_y = hun_y + SMOL_UI - 1;
+    c3_w  b_w;
+
+    if ( !a_d ) {
+        *buf_y-- = '0';
+    }
+    else{
+        while ( a_d > 0 ) {
+            b_w = a_d % 10;
+            a_d /= 10;
+
+            *buf_y-- = '0' + b_w;
+        }
+    }
+
+    *buf_y-- = 'i';
+    *buf_y-- = '0';
+
+    return buf_y + 1;
+}
+
+/* u3s_etch_ui(): atom to @ui.
+ */
+u3_atom
+u3s_etch_ui(u3_atom a)
+{
+    c3_d a_d;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI];
+        c3_y* buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        c3_w dif_w = (c3_p)buf_y - (c3_p)hun_y;
+        return u3i_bytes(SMOL_UI - dif_w, buf_y);
+    }
+
+    u3i_slab sab_u;
+    size_t   len_i;
+    mpz_t    a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    u3i_slab_bare(&sab_u, 3, len_i);
+    sab_u.buf_w[sab_u.len_w - 1] = 0;
+
+    _cs_etch_ui_bytes(a_mp, len_i, sab_u.buf_y);
+
+    mpz_clear(a_mp);
+    return u3i_slab_mint_bytes(&sab_u);
+}
+
+/* u3s_etch_ui_c(): atom to @ui, as a malloc'd c string.
+ */
+size_t
+u3s_etch_ui_c(u3_atom a, c3_c** out_c)
+{
+    c3_d   a_d;
+    size_t len_i;
+    c3_y*  buf_y;
+
+    if ( c3y == u3r_safe_chub(a, &a_d) ) {
+        c3_y hun_y[SMOL_UI];
+        buf_y = u3s_etch_ui_smol(a_d, hun_y);
+        len_i = SMOL_UI - ((c3_p)buf_y - (c3_p)hun_y);
+        *out_c = c3_malloc(len_i + 1);
+        (*out_c)[len_i] = 0;
+        memcpy(*out_c, buf_y, len_i);
+
+        return len_i;
+    }
+
+    mpz_t a_mp;
+    u3r_mp(a_mp, a);
+
+    len_i = _cs_etch_ui_size(a_mp);
+    buf_y = c3_malloc(len_i + 1);
+    buf_y[len_i] = 0;
+
+    len_i = _cs_etch_ui_bytes(a_mp, len_i, buf_y);
+
+    *out_c = (c3_c*)buf_y;
+
+    mpz_clear(a_mp);
+    return len_i;
+}
+
 /* _cs_etch_ux_bytes(): atom to @ux impl.
 */
 static void
@@ -2190,7 +2335,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   c3_s suf_s;
   c3_s puf_s;
 
-  if ( !len_w || *byt_y != '~') { 
+  if ( !len_w || *byt_y != '~') {
     return u3_none;
   }
 
@@ -2246,7 +2391,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   //
   while ( len_w && hak < 4) {
 
-    if ( *byt_y != '-') { 
+    if ( *byt_y != '-') {
       return u3_none;
     }
 
@@ -2263,7 +2408,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
         break;
       }
 
-      else { 
+      else {
         return u3_none;
       }
     }
@@ -2313,7 +2458,7 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
   //
   while ( len_w ) {
 
-    if ( *byt_y != '-') { 
+    if ( *byt_y != '-') {
       goto sift_p_fail;
     }
 
@@ -2358,10 +2503,10 @@ u3s_sift_p_bytes(c3_w len_w, c3_y* byt_y)
     }
   }
 
-  // Number of words in the tail 
+  // Number of words in the tail
   // must be a multiple of four
   //
-  if ( hak ) { 
+  if ( hak ) {
     goto sift_p_fail;
   }
 
@@ -2477,7 +2622,7 @@ static inline c3_o _cs_yelp_mp(mpz_t yer_mp)
 {
 
   c3_o res_o;
- 
+
   if ( mpz_divisible_ui_p(yer_mp, 4) ) {
 
     if ( mpz_divisible_ui_p(yer_mp, 100) ) {
@@ -2549,7 +2694,7 @@ static inline void _cs_yawn(mpz_t days_mp, struct _cald* cal)
   for ( size_t mot = 0; mot < cal->mot_s; mot++ ) {
     mpz_add_ui(days_mp, days_mp, cah[mot]);
   }
- 
+
   // Elapsed days in years
   //
   while ( mpz_cmp_ui(cal->yer_mp, 0) > 0) {
@@ -2788,7 +2933,7 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
     // Parse ..fractional, at least ..cafe
     //
     if ( len_w >= 6 ) {
- 
+
       if ( *byt_y != '.' ) {
         goto sift_da_fail;
       }
@@ -2799,7 +2944,7 @@ u3s_sift_da_bytes(c3_w len_w, c3_y* byt_y)
       size_t muc = 4;
 
       while ( len_w >= 5 && muc > 0 ) {
-       
+
         if ( *byt_y != '.' ) {
           goto sift_da_fail;
         }
