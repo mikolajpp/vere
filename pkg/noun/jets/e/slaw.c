@@ -57,14 +57,14 @@ u3qe_slaw(u3_atom a, u3_atom b)
 
     case c3__ud: res = u3s_sift_ud(b); break;
     case c3__ui: res = u3s_sift_ui(b); break;
+    case c3__ux: res = u3s_sift_ux(b); break;
     case c3__uv: res = u3s_sift_uv(b); break;
     case c3__uw: res = u3s_sift_uw(b); break;
-    case c3__ux: res = u3s_sift_ux(b); break;
 
     // %ta is used once in link.hoon. don't bother.
 
     case c3__tas: {
-                      res = _parse_tas(b); 
+                      res = _parse_tas(b);
                       if ( res == u3_none ) {
                           return u3_nul;
                       }
@@ -76,7 +76,7 @@ u3qe_slaw(u3_atom a, u3_atom b)
 
   // The u3s_sift functions 
   // signal parsing failure by returning u3_none.
-  // This does not mean the input was wrong - the jet 
+  // This does not mean the input was wrong - the jet
   // could simply choose not to handle certain cases.
   //
   if ( res == u3_none ) {
