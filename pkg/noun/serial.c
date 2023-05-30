@@ -1885,9 +1885,7 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
     }
 
     *buf_y-- = 'i';
-    *buf_y-- = '0';
-
-    buf_y++;
+    *buf_y = '0';
 
     // XX mpz_sizeinbase may overestimate by 1
     {
@@ -1895,7 +1893,7 @@ _cs_etch_ui_bytes(mpz_t a_mp, size_t len_i, c3_y* hun_y)
 
         if ( dif_i ) {
             len_i -= dif_i;
-            memmove(hun_y, buf_y, dif_i);
+            memmove(hun_y, buf_y, len_i);
             memset(hun_y + len_i, 0, dif_i);
         }
     }
@@ -3270,29 +3268,6 @@ u3s_sift_ud(u3_atom a)
   byt_y += 2; \
 }
 
-/* _cs_dec_bit: compute the number of bits
- * needed for a decimal number 99...9 of length l.
- *
- */
-c3_d _cs_bit_dec(c3_d l) {
-
-  if ( l == 0 ) { return 1; }
-
-  c3_d val_d = 0;
-  c3_d pot_d = 1;
-  c3_d k = 0;
-
-  while ( l-- ) { val_d  *= 10; val_d += 9; }
-
-  while ( pot_d < val_d ) {
-    pot_d <<= 1;
-    k++;
-  }
-
-  return k;
-}
-
-
 /* u3s_sift_ui_bytes: parse @ui.
  */
 u3_weak
@@ -3346,7 +3321,8 @@ u3s_sift_ui_bytes(c3_w len_w, c3_y* byt_y)
     // avoid gmp realloc if possible
     //
     {
-      mpz_init2(a_mp, (c3_w)c3_min(_cs_bit_dec(len_w), UINT32_MAX));
+      c3_d bit_d = len_w/3 * 10;
+      mpz_init2(a_mp, (c3_w)c3_min(bit_d, UINT32_MAX));
       mpz_init(bas_mp);
 
       mpz_ui_pow_ui(bas_mp, 10, 19);
