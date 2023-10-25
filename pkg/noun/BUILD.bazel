@@ -41,6 +41,7 @@ vere_library(
         "@pdjson",
         "@sigsegv",
         "@softfloat",
+	"@zlib",
     ] + select({
         "@platforms//os:macos": ["//pkg/noun/platform/darwin"],
         "@platforms//os:linux": ["//pkg/noun/platform/linux"],
